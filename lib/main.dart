@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // ✅ Firebase Core
 import 'scanner_screen.dart';
 import 'inventory_screen.dart';
 import 'expiry_tracker_screen.dart';
@@ -6,7 +7,9 @@ import 'waste_reduction_screen.dart';
 import 'recommendations_screen.dart';
 import 'item_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // ✅ Ensures platform bindings are ready
+  await Firebase.initializeApp();            // ✅ Initializes Firebase
   runApp(FridgeApp());
 }
 

@@ -1,3 +1,14 @@
+buildscript {
+    repositories {
+        google()             // ✅ Required for Firebase and Android tools
+        mavenCentral()       // ✅ Fallback repo
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.2.0")
+        classpath("com.google.gms:google-services:4.3.15") // ✅ Firebase plugin
+    }
+}
+
 allprojects {
     repositories {
         google()

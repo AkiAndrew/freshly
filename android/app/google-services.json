@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "375036432927",
+    "project_id": "fridge-management-4fa4f",
+    "storage_bucket": "fridge-management-4fa4f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375036432927:android:5d771abe62a5050a02bb2a",
+        "android_client_info": {
+          "package_name": "com.company.freshly"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKB_pPhwFSUnk3XfDQaYFEbwGQIFrFpFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375036432927:android:e8c9ee316a622d7e02bb2a",
+        "android_client_info": {
+          "package_name": "com.example.assignment"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKB_pPhwFSUnk3XfDQaYFEbwGQIFrFpFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375036432927:android:51ee4846dc6e80fb02bb2a",
+        "android_client_info": {
+          "package_name": "fridge.assignment.apu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKB_pPhwFSUnk3XfDQaYFEbwGQIFrFpFI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

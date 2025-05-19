@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // ✅ Firebase Core
+import 'package:firebase_core/firebase_core.dart'; // Firebase Core
 import 'scanner_screen.dart';
 import 'inventory_screen.dart';
 import 'expiry_tracker_screen.dart';
 import 'waste_reduction_screen.dart';
 import 'recommendations_screen.dart';
 import 'item_screen.dart';
+import 'login_screen.dart'; // import the login screen
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // ✅ Ensures platform bindings are ready
-  await Firebase.initializeApp();            // ✅ Initializes Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(FridgeApp());
 }
 
@@ -28,6 +29,7 @@ class FridgeApp extends StatelessWidget {
         '/waste': (context) => WasteReductionScreen(),
         '/recommendations': (context) => RecommendationsScreen(),
         '/item': (context) => ItemScreen(),
+        '/login': (context) => LoginScreen(), // add login route
       },
     );
   }
@@ -61,7 +63,10 @@ class HomeScreen extends StatelessWidget {
                   icon: Icon(Icons.shopping_cart),
                   onPressed: () => Navigator.pushNamed(context, '/item'),
                 ),
-                Icon(Icons.settings),
+                IconButton(
+                  icon: Icon(Icons.person), // user icon instead of settings
+                  onPressed: () => Navigator.pushNamed(context, '/login'), // navigate to login
+                ),
               ],
             )
           ],

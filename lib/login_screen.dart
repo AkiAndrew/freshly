@@ -1,13 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'user_home_screen.dart';
+import 'admin_home_screen.dart';
+
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Make sure Firebase is initialized
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Role Based Auth',
+      initialRoute: '/login',
+      routes: {
+        '/login': (ctx) => LoginScreen(),
+        '/admin_home_screen': (ctx) => AdminHomeScreen(),
+        '/user_home_screen': (ctx) => UserHomeScreen(),
+      },
+    );
+  }
+}
+
+enum AuthMode { login, register }
 
 class LoginScreen extends StatefulWidget {
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
-
-enum AuthMode { login, register }
 
 class _LoginScreenState extends State<LoginScreen> {
   final _auth = FirebaseAuth.instance;
@@ -20,7 +45,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Role selection - default to 'user'
   String _selectedRole = 'user';
   final List<String> _roles = ['user', 'admin'];
 
@@ -36,35 +60,60 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       if (_authMode == AuthMode.login) {
-        await _auth.signInWithEmailAndPassword(email: _email, password: _password);
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: _email,
+          password: _password,
+        );
+
+        await _redirectBasedOnRole(userCredential.user!.uid);
       } else {
-        // Register new user
         UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
           email: _email,
           password: _password,
         );
 
-        // Save role info to Firestore
+        // Save user role in Firestore
         await _firestore.collection('users').doc(userCredential.user!.uid).set({
+          'uid': userCredential.user!.uid,
           'email': _email,
           'role': _selectedRole,
           'createdAt': FieldValue.serverTimestamp(),
         });
+
+        await _redirectBasedOnRole(userCredential.user!.uid);
       }
-      Navigator.of(context).pop(); // Go back on success
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMessage = e.message;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = "An error occurred. Please try again.";
+        _errorMessage = 'An error occurred. Please try again.';
       });
     }
 
     setState(() {
       _isLoading = false;
     });
+  }
+
+  Future<void> _redirectBasedOnRole(String uid) async {
+    try {
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
+
+      if (userDoc.exists) {
+        final role = userDoc.get('role') as String?;
+        if (role == 'admin') {
+          Navigator.of(context).pushReplacementNamed('/admin_home_screen');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/user_home_screen');
+        }
+      } else {
+        Navigator.of(context).pushReplacementNamed('/user_home_screen');
+      }
+    } catch (e) {
+      Navigator.of(context).pushReplacementNamed('/user_home_screen');
+    }
   }
 
   void _switchAuthMode() {
@@ -77,7 +126,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_authMode == AuthMode.login ? 'Login' : 'Register')),
+      appBar: AppBar(
+        title: Text(_authMode == AuthMode.login ? 'Login' : 'Register'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -87,9 +138,9 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 if (_errorMessage != null)
                   Container(
-                    color: Colors.red[100],
                     padding: EdgeInsets.all(8),
                     margin: EdgeInsets.only(bottom: 10),
+                    color: Colors.red[100],
                     child: Text(_errorMessage!, style: TextStyle(color: Colors.red)),
                   ),
                 TextFormField(
@@ -115,7 +166,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   onSaved: (value) => _password = value!.trim(),
                 ),
 
-                // Show role dropdown ONLY when registering
                 if (_authMode == AuthMode.register) ...[
                   SizedBox(height: 20),
                   DropdownButtonFormField<String>(

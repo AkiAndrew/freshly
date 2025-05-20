@@ -12,10 +12,10 @@ import 'login_screen.dart'; // import the login screen
 
 class HomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
-    {'title': 'Scan Receipt', 'route': '/scanner'},
-    {'title': 'Add Item', 'route': '/inventory'},
-    {'title': 'View Pantry', 'route': '/inventory'},
-    {'title': 'Report', 'route': '/waste'},
+  {'title': 'Scan Receipt', 'route': '/scanner'},
+  {'title': 'Add Item', 'route': '/product'},
+  {'title': 'View Pantry', 'route': '/inventory'},
+  {'title': 'Report', 'route': '/waste'},
   ];
 
   final List<Map<String, String>> expiringSoonItems = [

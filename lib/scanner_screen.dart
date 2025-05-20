@@ -106,7 +106,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   void _addToPantry() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Added ${_detectedItems.join(', ')} to pantry')),
+      SnackBar(content: Text('Added ${_detectedItems.join(', ')} to database')),
     );
   }
 
@@ -165,15 +165,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
               child: Text('Scan Barcode', style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
             SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _isDetecting ? null : _captureAndDetect,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text('Capture Receipt', style: TextStyle(fontSize: 18, color: Colors.white)),
-            ),
           ],
         ),
       ),

@@ -3,14 +3,14 @@ import 'package:firebase_core/firebase_core.dart'; // Firebase Core
 import 'scanner_screen.dart';
 import 'waste_reduction_screen.dart';
 import 'login_screen.dart'; // import the login screen
-import 'database_screen.dart';
+import 'item_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminHomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
-    {'title': 'Add Item', 'route': '/inventory'},
+    {'title': 'Add Item', 'route': '/product'},
     {'title': 'Report', 'route': '/waste'},
-    {'title': 'Database', 'route': '/database'}, // Admin additional button
+    {'title': 'Add to Database', 'route': '/item'}, // Admin additional button
   ];
 
   final List<Map<String, String>> expiringSoonItems = [

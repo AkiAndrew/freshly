@@ -9,7 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class UserHomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
-    {'title': 'Add Item', 'route': '/inventory'},
+    {'title': 'Add Item', 'route': '/product'},
     {'title': 'Report', 'route': '/waste'},
 
   ];

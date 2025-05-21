@@ -5,15 +5,16 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class DatabaseScreen extends StatefulWidget {
+class ItemScreen extends StatefulWidget {
   @override
-  _DatabaseScreenState createState() => _DatabaseScreenState();
+  _ItemScreenState createState() => _ItemScreenState();
 }
 
-class _DatabaseScreenState extends State<DatabaseScreen> {
+class _ItemScreenState extends State<ItemScreen> {
   File? _imageFile;
-  String? _result = 'No item detected yet.';
+  String? _result = 'Item Image';
   bool _isDetecting = false;
   List<String> _detectedItems = [];
   final ImagePicker _picker = ImagePicker();
@@ -90,19 +91,111 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
         final File? image = result['image'];
 
         if (scannedCode != null) {
-          setState(() {
-            _result = 'Scanned Barcode: $scannedCode';
-            _detectedItems = [scannedCode];
-            if (image != null) {
+          if (image != null) {
+            setState(() {
               _imageFile = image;
-            }
-          });
+            });
+          }
+          _showManualEntryDialog(scannedCode, image);
         }
       }
     } catch (e) {
       print('Barcode scan failed: $e');
     }
   }
+
+void _showManualEntryDialog(String barcode, [File? image]) {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _expiryController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text('Add Item Info'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (image != null)
+              Container(
+                height: 150,
+                width: double.infinity,
+                margin: EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(image, fit: BoxFit.cover),
+                ),
+              ),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(labelText: 'Item Name'),
+            ),
+            TextField(
+              controller: _expiryController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: 'Estimated Expiry (Days)'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () async {
+            final name = _nameController.text.trim();
+            final expiry = _expiryController.text.trim();
+
+            if (name.isEmpty || expiry.isEmpty || int.tryParse(expiry) == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Please enter valid name and expiry (number only)')),
+              );
+              return;
+            }
+
+            // Check for duplicate barcode
+            final existing = await FirebaseFirestore.instance
+                .collection('items')
+                .where('barcode', isEqualTo: barcode)
+                .get();
+
+            if (existing.docs.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Item with this barcode already exists')),
+              );
+              return;
+            }
+
+            await FirebaseFirestore.instance.collection('items').add({
+              'name': name,
+              'barcode': barcode,
+              'estimatedExpiry': int.parse(expiry),
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+
+            Navigator.of(ctx).pop();
+
+            // ✅ Reset everything after dialog is closed
+            setState(() {
+              _imageFile = null;
+              _result = 'Item Image';
+              _detectedItems.clear();
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Item saved successfully')),
+            );
+          },
+          child: Text('Save'),
+        ),
+      ],
+    ),
+  );
+}
+
+
 
   void _addToPantry() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -134,7 +227,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: _imageFile == null
-                  ? Center(child: Text('No image selected', style: TextStyle(fontSize: 18)))
+                  ? Center(child: Text('No item scanned', style: TextStyle(fontSize: 18)))
                   : Image.file(_imageFile!, fit: BoxFit.cover),
             ),
             SizedBox(height: 20),
@@ -162,7 +255,19 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text('Scan Barcode', style: TextStyle(fontSize: 18, color: Colors.white)),
+              child: Text('Scan Item Barcode', style: TextStyle(fontSize: 18, color: Colors.white)),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/recipe');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Add Recipe', style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
             SizedBox(height: 10),
           ],
@@ -214,7 +319,6 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView> {
               }
             },
           ),
-          // Center square overlay
           Positioned.fill(
             child: Container(
               color: Colors.black.withOpacity(0.5),

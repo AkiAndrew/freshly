@@ -10,8 +10,6 @@ import 'login_screen.dart'; // import the login screen
 import 'database_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-
-
 class AdminHomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
     {'title': 'Scan Receipt', 'route': '/scanner'},
@@ -19,7 +17,6 @@ class AdminHomeScreen extends StatelessWidget {
     {'title': 'View Pantry', 'route': '/inventory'},
     {'title': 'Report', 'route': '/waste'},
     {'title': 'Database', 'route': '/database'}, // Admin additional button
-
   ];
 
   final List<Map<String, String>> expiringSoonItems = [
@@ -36,7 +33,13 @@ class AdminHomeScreen extends StatelessWidget {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(children: [Icon(Icons.kitchen), SizedBox(width: 8), Text('FRESHLY admin')]),
+            Row(
+              children: [
+                Icon(Icons.kitchen),
+                SizedBox(width: 8),
+                Text('FRESHLY admin'),
+              ],
+            ),
             Row(
               children: [
                 IconButton(
@@ -51,7 +54,7 @@ class AdminHomeScreen extends StatelessWidget {
                   },
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -60,7 +63,10 @@ class AdminHomeScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('Expiring Soon', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Expiring Soon',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
           ),
           SizedBox(
             height: 150,
@@ -91,18 +97,31 @@ class AdminHomeScreen extends StatelessWidget {
           Expanded(
             child: ListView.builder(
               itemCount: _pages.length,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    backgroundColor: Colors.black,
+              itemBuilder:
+                  (context, index) => Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.black,
+                      ),
+                      child: Text(
+                        _pages[index]['title'],
+                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      ),
+                      onPressed:
+                          () => Navigator.pushNamed(
+                            context,
+                            _pages[index]['route'],
+                          ),
+                    ),
                   ),
-                  child: Text(_pages[index]['title'], style: TextStyle(fontSize: 18, color: Colors.white)),
-                  onPressed: () => Navigator.pushNamed(context, _pages[index]['route']),
-                ),
-              ),
             ),
           ),
         ],

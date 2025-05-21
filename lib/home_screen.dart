@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // Firebase Core
 import 'scanner_screen.dart';
-import 'inventory_screen.dart';
-import 'expiry_tracker_screen.dart';
 import 'waste_reduction_screen.dart';
-import 'recommendations_screen.dart';
-import 'item_screen.dart';
 import 'login_screen.dart'; // import the login screen
 
 
 
 class HomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
-  {'title': 'Scan Receipt', 'route': '/scanner'},
   {'title': 'Add Item', 'route': '/product'},
-  {'title': 'View Pantry', 'route': '/inventory'},
   {'title': 'Report', 'route': '/waste'},
   ];
 

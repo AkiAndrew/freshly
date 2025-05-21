@@ -183,6 +183,18 @@ class _ProductScreenState extends State<ProductScreen> {
               ),
               child: Text('Add Product', style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
+            SizedBox(height: 20), // 👈 adds vertical space between buttons
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/scanner'); // 👈 using named route
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Scan Barcode', style: TextStyle(fontSize: 18, color: Colors.white)),
+            ),
           ],
         ),
       ),

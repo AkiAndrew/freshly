@@ -8,11 +8,13 @@ plugins {
 android {
     namespace = "com.example.assignment"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973" 
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // Enable core library desugaring here
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -39,7 +41,10 @@ flutter {
 }
 
 dependencies {
-    implementation("com.google.firebase:firebase-analytics-ktx") // ✅ Example Firebase SDK
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
     // You can add more Firebase SDKs:
     // implementation("com.google.firebase:firebase-auth-ktx")
     // implementation("com.google.firebase:firebase-firestore-ktx")

@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // Firebase Core
-import 'scanner_screen.dart';
-import 'waste_reduction_screen.dart';
-import 'login_screen.dart'; // import the login screen
 import 'package:firebase_auth/firebase_auth.dart';
-
-
+import 'notification_service.dart'; // import your notification service
 
 class UserHomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
     {'title': 'Add Item', 'route': '/product'},
     {'title': 'Report', 'route': '/waste'},
-
   ];
 
   final List<Map<String, String>> expiringSoonItems = [
@@ -22,6 +16,8 @@ class UserHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? 'demoUserId';
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -80,6 +76,29 @@ class UserHomeScreen extends StatelessWidget {
               },
             ),
           ),
+
+          // Test Notification Button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final notificationService = NotificationService();
+                await notificationService.init();
+                await notificationService.checkAndNotifyExpiry(currentUserId);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Checked for expiring products')),
+                );
+              },
+              child: Text('Test Expiry Notification', style: TextStyle(fontSize: 16, color: Colors.white)),
+            ),
+          ),
+
           Expanded(
             child: ListView.builder(
               itemCount: _pages.length,

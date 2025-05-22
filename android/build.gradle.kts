@@ -1,7 +1,7 @@
 buildscript {
     repositories {
-        google()             // ✅ Required for Firebase and Android tools
-        mavenCentral()       // ✅ Fallback repo
+        google()             
+        mavenCentral()       
     }
     dependencies {
         classpath("com.android.tools.build:gradle:8.2.0")

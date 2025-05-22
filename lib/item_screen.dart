@@ -7,9 +7,285 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// Extension to capitalize strings - MOVED TO TOP
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
+  }
+}
+
+// Helper function as a backup
+String capitalizeString(String text) {
+  if (text.isEmpty) return text;
+  return "${text[0].toUpperCase()}${text.substring(1)}";
+}
+
 class ItemScreen extends StatefulWidget {
   @override
   _ItemScreenState createState() => _ItemScreenState();
+}
+
+class ItemListView extends StatefulWidget {
+  @override
+  State<ItemListView> createState() => _ItemListViewState();
+}
+
+class _ItemListViewState extends State<ItemListView> {
+  String _searchFilter = '';
+  String _categoryFilter = 'all';
+  
+  final List<String> _categories = [
+    'all',
+    'vegetables',
+    'fruits', 
+    'meat',
+    'dairy',
+    'cereal',
+    'beverage'
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Item List'),
+        backgroundColor: Colors.purple,
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          // Search and Filter Section
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Search items',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchFilter = value.toLowerCase();
+                    });
+                  },
+                ),
+                SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: _categoryFilter,
+                  decoration: InputDecoration(
+                    labelText: 'Filter by category',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  items: _categories.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(category == 'all' ? 'All Categories' : capitalizeString(category)),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _categoryFilter = newValue ?? 'all';
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          // Items List
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('items')
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                final items = snapshot.data?.docs ?? [];
+                
+                // Apply filters
+                final filteredItems = items.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final name = (data['name'] ?? '').toString().toLowerCase();
+                  final productTag = (data['productTag'] ?? '').toString().toLowerCase();
+                  
+                  // Search filter
+                  final matchesSearch = _searchFilter.isEmpty || 
+                      name.contains(_searchFilter) || 
+                      productTag.contains(_searchFilter);
+                  
+                  // Category filter
+                  final matchesCategory = _categoryFilter == 'all' || 
+                      productTag == _categoryFilter;
+                  
+                  return matchesSearch && matchesCategory;
+                }).toList();
+
+                if (filteredItems.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          _searchFilter.isEmpty && _categoryFilter == 'all'
+                              ? 'No items found.\nStart adding items!'
+                              : 'No items match your filters.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filteredItems.length,
+                  itemBuilder: (context, index) {
+                    final doc = filteredItems[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = data['name'] ?? 'Unknown Item';
+                    final productTag = data['productTag'] ?? 'unknown';
+                    final recipeTag = data['recipeTag'] ?? '';
+                    final barcode = data['barcode'];
+                    final createdAt = data['createdAt'] as Timestamp?;
+                    
+                    return Card(
+                      margin: EdgeInsets.only(bottom: 8),
+                      elevation: 2,
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: _getCategoryColor(productTag),
+                          child: Icon(
+                            _getCategoryIcon(productTag),
+                            color: Colors.white,
+                          ),
+                        ),
+                        title: Text(
+                          name,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Category: ${capitalizeString(productTag)}',
+                                style: TextStyle(color: _getCategoryColor(productTag))),
+                            Text('Recipe tag: $recipeTag'),
+                            if (barcode != null) Text('Barcode: $barcode'),
+                            if (createdAt != null)
+                              Text('Added: ${_formatDate(createdAt.toDate())}'),
+                          ],
+                        ),
+                        trailing: PopupMenuButton(
+                          onSelected: (value) {
+                            if (value == 'delete') {
+                              _deleteItem(doc.id, name);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text('Delete'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        isThreeLine: true,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'vegetables': return Colors.green;
+      case 'fruits': return Colors.orange;
+      case 'meat': return Colors.red;
+      case 'dairy': return Colors.blue;
+      case 'cereal': return Colors.brown;
+      case 'beverage': return Colors.cyan;
+      default: return Colors.grey;
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'vegetables': return Icons.eco;
+      case 'fruits': return Icons.apple;
+      case 'meat': return Icons.lunch_dining;
+      case 'dairy': return Icons.local_drink;
+      case 'cereal': return Icons.grain;
+      case 'beverage': return Icons.local_cafe;
+      default: return Icons.inventory;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _deleteItem(String docId, String itemName) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete Item'),
+        content: Text('Are you sure you want to delete "$itemName"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await FirebaseFirestore.instance
+                    .collection('items')
+                    .doc(docId)
+                    .delete();
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Item deleted successfully')),
+                );
+              } catch (e) {
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting item: $e')),
+                );
+              }
+            },
+            child: Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ItemScreenState extends State<ItemScreen> {
@@ -18,6 +294,16 @@ class _ItemScreenState extends State<ItemScreen> {
   bool _isDetecting = false;
   List<String> _detectedItems = [];
   final ImagePicker _picker = ImagePicker();
+
+  // Available product categories
+  final List<String> _productCategories = [
+    'vegetables',
+    'fruits', 
+    'meat',
+    'dairy',
+    'cereal',
+    'beverage'
+  ];
 
   Future<void> _requestCameraPermission() async {
     final status = await Permission.camera.request();
@@ -104,102 +390,231 @@ class _ItemScreenState extends State<ItemScreen> {
     }
   }
 
-void _showManualEntryDialog(String barcode, [File? image]) {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _expiryController = TextEditingController();
+  void _showManualEntryDialog(String barcode, [File? image]) {
+    final TextEditingController _nameController = TextEditingController();
+    final TextEditingController _recipeTagController = TextEditingController();
+    String? _selectedProductTag;
 
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text('Add Item Info'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (image != null)
-              Container(
-                height: 150,
-                width: double.infinity,
-                margin: EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey),
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Add Item Info'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (image != null)
+                  Container(
+                    height: 150,
+                    width: double.infinity,
+                    margin: EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(image, fit: BoxFit.cover),
+                    ),
+                  ),
+                TextField(
+                  controller: _nameController,
+                  decoration: InputDecoration(labelText: 'Item Name'),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(image, fit: BoxFit.cover),
+                SizedBox(height: 15),
+                DropdownButtonFormField<String>(
+                  value: _selectedProductTag,
+                  decoration: InputDecoration(
+                    labelText: 'Product Category',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _productCategories.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(capitalizeString(category)),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setDialogState(() {
+                      _selectedProductTag = newValue;
+                    });
+                  },
+                  hint: Text('Select category'),
                 ),
-              ),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(labelText: 'Item Name'),
+                SizedBox(height: 15),
+                TextField(
+                  controller: _recipeTagController,
+                  decoration: InputDecoration(
+                    labelText: 'Recipe Tag',
+                    hintText: 'e.g., apple, cheese, chicken',
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: _expiryController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: 'Estimated Expiry (Days)'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                final name = _nameController.text.trim();
+                final recipeTag = _recipeTagController.text.trim();
+
+                if (name.isEmpty || _selectedProductTag == null || recipeTag.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please fill all fields')),
+                  );
+                  return;
+                }
+
+                // Check for duplicate barcode
+                final existing = await FirebaseFirestore.instance
+                    .collection('items')
+                    .where('barcode', isEqualTo: barcode)
+                    .get();
+
+                if (existing.docs.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Item with this barcode already exists')),
+                  );
+                  return;
+                }
+
+                await FirebaseFirestore.instance.collection('items').add({
+                  'name': name,
+                  'barcode': barcode,
+                  'productTag': _selectedProductTag,
+                  'recipeTag': recipeTag.toLowerCase(),
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+
+                Navigator.of(ctx).pop();
+
+                // Reset everything after dialog is closed
+                setState(() {
+                  _imageFile = null;
+                  _result = 'Item Image';
+                  _detectedItems.clear();
+                });
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Item saved successfully')),
+                );
+              },
+              child: Text('Save'),
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () async {
-            final name = _nameController.text.trim();
-            final expiry = _expiryController.text.trim();
+    );
+  }
 
-            if (name.isEmpty || expiry.isEmpty || int.tryParse(expiry) == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Please enter valid name and expiry (number only)')),
-              );
-              return;
-            }
+  void _showCreateItemDialog() {
+    final TextEditingController _nameController = TextEditingController();
+    final TextEditingController _recipeTagController = TextEditingController();
+    String? _selectedProductTag;
 
-            // Check for duplicate barcode
-            final existing = await FirebaseFirestore.instance
-                .collection('items')
-                .where('barcode', isEqualTo: barcode)
-                .get();
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Create Item Without Barcode'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Item Name',
+                    hintText: 'e.g., Apple, Chicken, Milk',
+                  ),
+                ),
+                SizedBox(height: 15),
+                DropdownButtonFormField<String>(
+                  value: _selectedProductTag,
+                  decoration: InputDecoration(
+                    labelText: 'Product Category',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _productCategories.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(capitalizeString(category)),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setDialogState(() {
+                      _selectedProductTag = newValue;
+                    });
+                  },
+                  hint: Text('Select category'),
+                ),
+                SizedBox(height: 15),
+                TextField(
+                  controller: _recipeTagController,
+                  decoration: InputDecoration(
+                    labelText: 'Recipe Tag',
+                    hintText: 'e.g., apple, cheese, chicken',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final name = _nameController.text.trim();
+                final recipeTag = _recipeTagController.text.trim();
 
-            if (existing.docs.isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Item with this barcode already exists')),
-              );
-              return;
-            }
+                if (name.isEmpty || 
+                    _selectedProductTag == null ||
+                    recipeTag.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please fill all fields')),
+                  );
+                  return;
+                }
 
-            await FirebaseFirestore.instance.collection('items').add({
-              'name': name,
-              'barcode': barcode,
-              'estimatedExpiry': int.parse(expiry),
-              'createdAt': FieldValue.serverTimestamp(),
-            });
+                await FirebaseFirestore.instance.collection('items').add({
+                  'name': name,
+                  'barcode': null, // No barcode for manually created items
+                  'productTag': _selectedProductTag,
+                  'recipeTag': recipeTag.toLowerCase(),
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
 
-            Navigator.of(ctx).pop();
+                Navigator.of(ctx).pop();
 
-            // ✅ Reset everything after dialog is closed
-            setState(() {
-              _imageFile = null;
-              _result = 'Item Image';
-              _detectedItems.clear();
-            });
+                // Reset everything after dialog is closed
+                setState(() {
+                  _imageFile = null;
+                  _result = 'Item Image';
+                  _detectedItems.clear();
+                });
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Item saved successfully')),
-            );
-          },
-          child: Text('Save'),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Item "$name" saved with category: ${capitalizeString(_selectedProductTag!)}'),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              },
+              child: Text('Create Item'),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
-}
+      ),
+    );
+  }
 
-
-
-  void _addToPantry() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Added ${_detectedItems.join(', ')} to pantry')),
+  void _viewItemList() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ItemListView()),
     );
   }
 
@@ -239,7 +654,7 @@ void _showManualEntryDialog(String barcode, [File? image]) {
             Spacer(),
             if (_detectedItems.isNotEmpty)
               ElevatedButton(
-                onPressed: _addToPantry,
+                onPressed: _viewItemList,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
@@ -256,6 +671,26 @@ void _showManualEntryDialog(String barcode, [File? image]) {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text('Scan Item Barcode', style: TextStyle(fontSize: 18, color: Colors.white)),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _showCreateItemDialog,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('Create Item Without Barcode', style: TextStyle(fontSize: 16, color: Colors.white)),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _viewItemList,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple,
+                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('View Item List', style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
             SizedBox(height: 10),
             ElevatedButton(

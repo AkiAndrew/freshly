@@ -10,7 +10,7 @@ class Product {
   final String quantityUnit;
   final String tag;
   final String recipeTag;
-  final DateTime? expirationDate;
+  final DateTime expirationDate; // Removed nullable
 
   Product({
     String? id,
@@ -19,7 +19,7 @@ class Product {
     required this.quantityUnit,
     required this.tag,
     String? recipeTag,
-    this.expirationDate,
+    required this.expirationDate, // Made required
   })  : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         recipeTag = recipeTag ?? name.toLowerCase().trim();
 }
@@ -77,7 +77,7 @@ class _ProductScreenState extends State<ProductScreen> {
           recipeTag: data['recipeTag'],
           expirationDate: data['expirationDate'] != null
               ? (data['expirationDate'] as Timestamp).toDate()
-              : null,
+              : DateTime.now().add(const Duration(days: 7)), // Default fallback
         );
       }).toList();
 
@@ -110,9 +110,7 @@ class _ProductScreenState extends State<ProductScreen> {
       'quantityUnit': product.quantityUnit,
       'tag': product.tag,
       'recipeTag': product.recipeTag,
-      'expirationDate': product.expirationDate != null
-          ? Timestamp.fromDate(product.expirationDate!)
-          : null,
+      'expirationDate': Timestamp.fromDate(product.expirationDate), // Always save
     });
   }
 
@@ -300,93 +298,114 @@ class _ProductScreenState extends State<ProductScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: _products.isEmpty
-        ? const Center(child: Text('No products added yet.'))
-        : ListView.builder(
-            itemCount: _products.length,
-            itemBuilder: (context, index) {
-          final product = _products[index];
-          return Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 3,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            child: ListTile(
-              title: Flexible(
-            child: Text(
-              product.name,
-              overflow: TextOverflow.ellipsis,
-            ),
+            ? const Center(child: Text('No products added yet.'))
+            : ListView.builder(
+                itemCount: _products.length,
+                itemBuilder: (context, index) {
+                  final product = _products[index];
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Product name and action buttons row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  product.name,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 20),
+                                onPressed: () => _editProduct(index),
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                                onPressed: () => _deleteProduct(index),
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 32,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          // Product details
+                          Text(
+                            'Quantity: ${product.quantity} ${product.quantityUnit}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Expires: ${_formatDate(product.expirationDate)}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _isNearExpiry(product.expirationDate)
+                                  ? Colors.red
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Tags
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children: [
+                              Chip(
+                                label: Text(
+                                  product.tag,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                backgroundColor: _getTagColor(product.tag),
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              Chip(
+                                label: Text(
+                                  product.recipeTag,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                backgroundColor: Colors.amber.shade100,
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-              subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Quantity: ${product.quantity} ${product.quantityUnit}',
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (product.expirationDate != null)
-                Text(
-              'Expires: ${_formatDate(product.expirationDate!)}',
-              style: TextStyle(
-                color: _isNearExpiry(product.expirationDate!)
-                ? Colors.red
-                : null,
-              ),
-              overflow: TextOverflow.ellipsis,
-                ),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 8,
-                children: [
-              Chip(
-                label: Text(product.tag),
-                backgroundColor: _getTagColor(product.tag),
-              ),
-              Chip(
-                label: Text(product.recipeTag),
-                backgroundColor: Colors.amber.shade100,
-              ),
-                ],
-              ),
-            ],
-              ),
-              trailing: SizedBox(
-            width: 72,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-              iconSize: 20,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.edit),
-              onPressed: () => _editProduct(index),
-                ),
-                IconButton(
-              iconSize: 20,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _deleteProduct(index),
-                ),
-              ],
-            ),
-              ),
-            ),
-          );
-            },
-          ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addNewProduct,
         tooltip: 'Add Product',
         child: const Icon(Icons.add),
       ),
-        );
-      }
-    }
+    );
+  }
+}
 
 // ----------- AddProductPage -----------
 class AddProductPage extends StatefulWidget {
@@ -499,13 +518,57 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
+  // Validation helper methods
+  bool _isExpirationDateInvalid() {
+    if (_expirationDate == null) return true; // Now required
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDate = DateTime(_expirationDate!.year, _expirationDate!.month, _expirationDate!.day);
+    
+    // Check if the date is in the past
+    if (selectedDate.isBefore(today)) {
+      return true;
+    }
+    
+    // Check if the date is too far in the future (more than 5 years)
+    final fiveYearsFromNow = today.add(const Duration(days: 365 * 5));
+    if (selectedDate.isAfter(fiveYearsFromNow)) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  String _getExpirationDateErrorMessage() {
+    if (_expirationDate == null) return 'Expiration date is required';
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDate = DateTime(_expirationDate!.year, _expirationDate!.month, _expirationDate!.day);
+    
+    if (selectedDate.isBefore(today)) {
+      return 'Expiration date cannot be in the past';
+    }
+    
+    final fiveYearsFromNow = today.add(const Duration(days: 365 * 5));
+    if (selectedDate.isAfter(fiveYearsFromNow)) {
+      return 'Expiration date cannot be more than 5 years in the future';
+    }
+    
+    return '';
+  }
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime now = DateTime.now();
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _expirationDate ?? now.add(const Duration(days: 7)),
       firstDate: now,
-      lastDate: now.add(const Duration(days: 365 * 2)),
+      lastDate: now.add(const Duration(days: 365 * 5)), // 5 years ahead
+      helpText: 'Select expiration date',
+      cancelText: 'Cancel',
+      confirmText: 'Select',
     );
 
     if (picked != null && picked != _expirationDate) {
@@ -533,10 +596,27 @@ class _AddProductPageState extends State<AddProductPage> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Product Name'),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Enter product name'
-                    : null,
+                decoration: const InputDecoration(
+                  labelText: 'Product Name',
+                  border: OutlineInputBorder(),
+                  hintText: 'Enter product name (e.g., Apple, Milk)',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Product name is required';
+                  }
+                  if (value.trim().length < 2) {
+                    return 'Product name must be at least 2 characters';
+                  }
+                  if (value.trim().length > 50) {
+                    return 'Product name cannot exceed 50 characters';
+                  }
+                  // Check for invalid characters
+                  if (value.contains(RegExp(r'[0-9!@#$%^&*(),.?":{}|<>]'))) {
+                    return 'Product name should not contain numbers or special characters';
+                  }
+                  return null;
+                },
                 onChanged: (value) {
                   if (widget.product == null && value.length > 2) {
                     _suggestTag(value);
@@ -605,8 +685,21 @@ class _AddProductPageState extends State<AddProductPage> {
                     controller: _recipeTagController,
                     decoration: const InputDecoration(
                       labelText: 'Custom Recipe Tag',
+                      border: OutlineInputBorder(),
                       hintText: 'Enter a custom recipe tag',
                     ),
+                    validator: _customRecipeTag ? (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Custom recipe tag is required when custom mode is enabled';
+                      }
+                      if (value.trim().length < 2) {
+                        return 'Recipe tag must be at least 2 characters';
+                      }
+                      if (value.trim().length > 30) {
+                        return 'Recipe tag cannot exceed 30 characters';
+                      }
+                      return null;
+                    } : null,
                   ),
                 ),
                 crossFadeState: _customRecipeTag
@@ -621,15 +714,30 @@ class _AddProductPageState extends State<AddProductPage> {
                   Expanded(
                     child: TextFormField(
                       controller: _quantityController,
-                      decoration: const InputDecoration(labelText: 'Quantity'),
+                      decoration: const InputDecoration(
+                        labelText: 'Quantity',
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter quantity',
+                      ),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Enter quantity';
+                          return 'Quantity is required';
                         }
-                        if (int.tryParse(value) == null) {
-                          return 'Enter valid number';
+                        
+                        final quantity = int.tryParse(value.trim());
+                        if (quantity == null) {
+                          return 'Please enter a valid number';
                         }
+                        
+                        if (quantity <= 0) {
+                          return 'Quantity must be greater than 0';
+                        }
+                        
+                        if (quantity > 9999) {
+                          return 'Quantity cannot exceed 9999';
+                        }
+                        
                         return null;
                       },
                     ),
@@ -655,13 +763,57 @@ class _AddProductPageState extends State<AddProductPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              ListTile(
-                title: Text(_expirationDate == null
-                    ? 'Select Expiry Date'
-                    : 'Expiry: ${_formatDate(_expirationDate!)}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () => _selectDate(context),
+              // Required expiration date picker with validation
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _expirationDate == null ? Colors.red.shade300 : Colors.grey.shade400,
+                    width: _expirationDate == null ? 2 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: ListTile(
+                  title: Row(
+                    children: [
+                      Text(
+                        _expirationDate == null
+                            ? 'Select Expiry Date'
+                            : 'Expiry: ${_formatDate(_expirationDate!)}',
+                        style: TextStyle(
+                          color: _expirationDate == null ? Colors.red.shade700 : null,
+                          fontWeight: _expirationDate == null ? FontWeight.w500 : null,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '*',
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: Icon(
+                    Icons.calendar_today,
+                    color: _expirationDate == null ? Colors.red.shade700 : null,
+                  ),
+                  onTap: () => _selectDate(context),
+                ),
               ),
+              // Show validation message for expiration date if needed
+              if (_isExpirationDateInvalid())
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                  child: Text(
+                    _getExpirationDateErrorMessage(),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 16),
               const Text(
                 'Product Category',
@@ -685,24 +837,42 @@ class _AddProductPageState extends State<AddProductPage> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  if (_formKey.currentState!.validate() &&
-                      _selectedTag.isNotEmpty) {
+                  // Validate the form and check expiration date
+                  if (_formKey.currentState!.validate() && 
+                      _selectedTag.isNotEmpty && 
+                      !_isExpirationDateInvalid()) {
+                    
+                    // Additional validation for recipe tag if custom
+                    if (_customRecipeTag && _recipeTagController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please enter a custom recipe tag or turn off custom mode')),
+                      );
+                      return;
+                    }
+                    
                     final product = Product(
                       id: _productId,
-                      name: _nameController.text,
-                      quantity: int.parse(_quantityController.text),
+                      name: _nameController.text.trim(),
+                      quantity: int.parse(_quantityController.text.trim()),
                       quantityUnit: _selectedUnit,
                       tag: _selectedTag,
                       recipeTag: _customRecipeTag
                           ? _recipeTagController.text.trim()
                           : _nameController.text.toLowerCase().trim(),
-                      expirationDate: _expirationDate,
+                      expirationDate: _expirationDate!, // Now required
                     );
                     Navigator.of(context).pop(product);
-                  } else if (_selectedTag.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please select a product tag')),
-                    );
+                  } else {
+                    // Show specific error messages
+                    if (_selectedTag.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please select a product category')),
+                      );
+                    } else if (_isExpirationDateInvalid()) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(_getExpirationDateErrorMessage())),
+                      );
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(

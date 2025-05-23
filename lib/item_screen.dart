@@ -693,18 +693,6 @@ class _ItemScreenState extends State<ItemScreen> {
               child: Text('View Item List', style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
             SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/recipe');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text('Add Recipe', style: TextStyle(fontSize: 18, color: Colors.white)),
-            ),
-            SizedBox(height: 10),
           ],
         ),
       ),

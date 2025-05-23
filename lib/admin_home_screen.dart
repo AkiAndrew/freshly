@@ -11,6 +11,7 @@ class AdminHomeScreen extends StatelessWidget {
     {'title': 'Add Item', 'route': '/product'},
     {'title': 'Report', 'route': '/waste'},
     {'title': 'Add to Database', 'route': '/item'}, // Admin additional button
+    {'title': 'Add Recipe', 'route': '/recipe'}, // Moved from ItemScreen
   ];
 
   final List<Map<String, String>> expiringSoonItems = [

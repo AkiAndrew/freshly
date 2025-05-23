@@ -10,7 +10,7 @@ class Product {
   final String quantityUnit;
   final String tag;
   final String recipeTag;
-  final DateTime expirationDate; // Removed nullable
+  final DateTime expirationDate;
 
   Product({
     String? id,
@@ -19,9 +19,34 @@ class Product {
     required this.quantityUnit,
     required this.tag,
     String? recipeTag,
-    required this.expirationDate, // Made required
+    required this.expirationDate,
   })  : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         recipeTag = recipeTag ?? name.toLowerCase().trim();
+}
+
+// ----------- Item Model for Firebase items collection -----------
+class Item {
+  final String name;
+  final String productTag;
+  final String recipeTag;
+  final String? barcode;
+
+  Item({
+    required this.name,
+    required this.productTag,
+    required this.recipeTag,
+    this.barcode,
+  });
+
+  factory Item.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return Item(
+      name: data['name'] ?? '',
+      productTag: data['productTag'] ?? '',
+      recipeTag: data['recipeTag'] ?? '',
+      barcode: data['barcode'],
+    );
+  }
 }
 
 // ----------- Product Screen with Firebase Integration -----------
@@ -77,7 +102,7 @@ class _ProductScreenState extends State<ProductScreen> {
           recipeTag: data['recipeTag'],
           expirationDate: data['expirationDate'] != null
               ? (data['expirationDate'] as Timestamp).toDate()
-              : DateTime.now().add(const Duration(days: 7)), // Default fallback
+              : DateTime.now().add(const Duration(days: 7)),
         );
       }).toList();
 
@@ -110,7 +135,7 @@ class _ProductScreenState extends State<ProductScreen> {
       'quantityUnit': product.quantityUnit,
       'tag': product.tag,
       'recipeTag': product.recipeTag,
-      'expirationDate': Timestamp.fromDate(product.expirationDate), // Always save
+      'expirationDate': Timestamp.fromDate(product.expirationDate),
     });
   }
 
@@ -314,7 +339,6 @@ class _ProductScreenState extends State<ProductScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Product name and action buttons row
                           Row(
                             children: [
                               Expanded(
@@ -352,7 +376,6 @@ class _ProductScreenState extends State<ProductScreen> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          // Product details
                           Text(
                             'Quantity: ${product.quantity} ${product.quantityUnit}',
                             style: const TextStyle(fontSize: 14),
@@ -368,7 +391,6 @@ class _ProductScreenState extends State<ProductScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          // Tags
                           Wrap(
                             spacing: 8,
                             runSpacing: 4,
@@ -407,7 +429,7 @@ class _ProductScreenState extends State<ProductScreen> {
   }
 }
 
-// ----------- AddProductPage -----------
+// ----------- AddProductPage with Firebase Items Integration -----------
 class AddProductPage extends StatefulWidget {
   final Product? product;
 
@@ -428,6 +450,14 @@ class _AddProductPageState extends State<AddProductPage> {
   DateTime? _expirationDate;
   String? _productId;
   bool _customRecipeTag = false;
+  
+  // New variables for Firebase items integration
+  List<Item> _suggestedItems = [];
+  bool _isSearching = false;
+  Item? _selectedItem;
+  bool _showSuggestions = false;
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   final List<String> _quantityUnits = [
     'piece(s)',
@@ -440,35 +470,6 @@ class _AddProductPageState extends State<AddProductPage> {
     'bottle(s)',
     'box(es)',
   ];
-
-  final Map<String, String> _productTagSuggestions = {
-    'apple': 'Fruit',
-    'banana': 'Fruit',
-    'orange': 'Fruit',
-    'strawberry': 'Fruit',
-    'broccoli': 'Vegetable',
-    'carrot': 'Vegetable',
-    'spinach': 'Vegetable',
-    'lettuce': 'Vegetable',
-    'milk': 'Dairy',
-    'cheese': 'Dairy',
-    'yogurt': 'Dairy',
-    'butter': 'Dairy',
-    'chicken': 'Meat',
-    'beef': 'Meat',
-    'pork': 'Meat',
-    'fish': 'Meat',
-    'cereal': 'Cereal',
-    'oats': 'Cereal',
-    'granola': 'Cereal',
-    'kellogg': 'Cereal',
-    'cheerios': 'Cereal',
-    'water': 'Beverage',
-    'juice': 'Beverage',
-    'soda': 'Beverage',
-    'coffee': 'Beverage',
-    'tea': 'Beverage',
-  };
 
   final List<String> _tagCategories = [
     'Vegetable',
@@ -499,39 +500,90 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
-  void _suggestTag(String productName) {
-    final lowerCaseName = productName.toLowerCase();
-
-    for (final entry in _productTagSuggestions.entries) {
-      if (lowerCaseName.contains(entry.key)) {
-        setState(() {
-          _selectedTag = entry.value;
-        });
-        return;
-      }
+  // Search for items in Firebase
+  Future<void> _searchItems(String productName) async {
+    if (productName.trim().length < 2) {
+      setState(() {
+        _suggestedItems.clear();
+        _showSuggestions = false;
+        _selectedItem = null;
+      });
+      return;
     }
 
-    if (_selectedTag.isEmpty) {
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      // Search for items with case-insensitive matching
+      final snapshot = await _firestore
+          .collection('items')
+          .where('name', isGreaterThanOrEqualTo: productName.toLowerCase())
+          .where('name', isLessThanOrEqualTo: productName.toLowerCase() + '\uf8ff')
+          .limit(10)
+          .get();
+
+      final items = snapshot.docs.map((doc) => Item.fromFirestore(doc)).toList();
+      
+      // Also search for items that contain the search term
+      if (items.isEmpty) {
+        final allItemsSnapshot = await _firestore.collection('items').get();
+        final allItems = allItemsSnapshot.docs
+            .map((doc) => Item.fromFirestore(doc))
+            .where((item) => item.name.toLowerCase().contains(productName.toLowerCase()))
+            .take(10)
+            .toList();
+        items.addAll(allItems);
+      }
+
       setState(() {
-        _selectedTag = 'Other';
+        _suggestedItems = items;
+        _showSuggestions = items.isNotEmpty;
+        _isSearching = false;
+      });
+    } catch (e) {
+      print('Error searching items: $e');
+      setState(() {
+        _isSearching = false;
+        _suggestedItems.clear();
+        _showSuggestions = false;
       });
     }
   }
 
+  // Select an item from suggestions
+  void _selectItem(Item item) {
+    setState(() {
+      _selectedItem = item;
+      _nameController.text = item.name;
+      _selectedTag = _capitalizeFirst(item.productTag);
+      _recipeTagController.text = item.recipeTag;
+      _showSuggestions = false;
+      
+      // If the recipe tag is different from the name, enable custom mode
+      _customRecipeTag = item.recipeTag.toLowerCase().trim() != 
+                        item.name.toLowerCase().trim();
+    });
+  }
+
+  String _capitalizeFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+  }
+
   // Validation helper methods
   bool _isExpirationDateInvalid() {
-    if (_expirationDate == null) return true; // Now required
+    if (_expirationDate == null) return true;
     
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final selectedDate = DateTime(_expirationDate!.year, _expirationDate!.month, _expirationDate!.day);
     
-    // Check if the date is in the past
     if (selectedDate.isBefore(today)) {
       return true;
     }
     
-    // Check if the date is too far in the future (more than 5 years)
     final fiveYearsFromNow = today.add(const Duration(days: 365 * 5));
     if (selectedDate.isAfter(fiveYearsFromNow)) {
       return true;
@@ -565,7 +617,7 @@ class _AddProductPageState extends State<AddProductPage> {
       context: context,
       initialDate: _expirationDate ?? now.add(const Duration(days: 7)),
       firstDate: now,
-      lastDate: now.add(const Duration(days: 365 * 5)), // 5 years ahead
+      lastDate: now.add(const Duration(days: 365 * 5)),
       helpText: 'Select expiration date',
       cancelText: 'Cancel',
       confirmText: 'Select',
@@ -594,34 +646,116 @@ class _AddProductPageState extends State<AddProductPage> {
           key: _formKey,
           child: ListView(
             children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Product Name',
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter product name (e.g., Apple, Milk)',
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Product name is required';
-                  }
-                  if (value.trim().length < 2) {
-                    return 'Product name must be at least 2 characters';
-                  }
-                  if (value.trim().length > 50) {
-                    return 'Product name cannot exceed 50 characters';
-                  }
-                  // Check for invalid characters
-                  if (value.contains(RegExp(r'[0-9!@#$%^&*(),.?":{}|<>]'))) {
-                    return 'Product name should not contain numbers or special characters';
-                  }
-                  return null;
-                },
-                onChanged: (value) {
-                  if (widget.product == null && value.length > 2) {
-                    _suggestTag(value);
-                  }
-                },
+              // Product name field with suggestions
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Product Name',
+                      border: const OutlineInputBorder(),
+                      hintText: 'Enter product name (e.g., Apple, Milk)',
+                      suffixIcon: _isSearching 
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : null,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Product name is required';
+                      }
+                      if (value.trim().length < 2) {
+                        return 'Product name must be at least 2 characters';
+                      }
+                      if (value.trim().length > 50) {
+                        return 'Product name cannot exceed 50 characters';
+                      }
+                      return null;
+                    },
+                    onChanged: (value) {
+                      if (widget.product == null) {
+                        _searchItems(value);
+                      }
+                    },
+                  ),
+                  // Suggestions dropdown
+                  if (_showSuggestions && _suggestedItems.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Text(
+                              'Suggestions from database:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                          ..._suggestedItems.map((item) => ListTile(
+                            dense: true,
+                            title: Text(item.name),
+                            subtitle: Text('${_capitalizeFirst(item.productTag)} • ${item.recipeTag}'),
+                            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                            onTap: () => _selectItem(item),
+                          )),
+                        ],
+                      ),
+                    ),
+                  // Selected item indicator
+                  if (_selectedItem != null)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        border: Border.all(color: Colors.green.shade200),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green.shade600, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Selected: ${_selectedItem!.name} (${_capitalizeFirst(_selectedItem!.productTag)})',
+                              style: TextStyle(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 16),
+                            onPressed: () {
+                              setState(() {
+                                _selectedItem = null;
+                                _selectedTag = 'Other';
+                                _recipeTagController.clear();
+                                _customRecipeTag = false;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 16),
               Row(
@@ -662,8 +796,12 @@ class _AddProductPageState extends State<AddProductPage> {
                       setState(() {
                         _customRecipeTag = value;
                         if (!value) {
-                          _recipeTagController.text =
-                              _nameController.text.toLowerCase().trim();
+                          if (_selectedItem != null) {
+                            _recipeTagController.text = _selectedItem!.recipeTag;
+                          } else {
+                            _recipeTagController.text =
+                                _nameController.text.toLowerCase().trim();
+                          }
                         }
                       });
                     },
@@ -675,7 +813,9 @@ class _AddProductPageState extends State<AddProductPage> {
                 firstChild: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: Text(
-                    'Recipe tag will be "${_nameController.text.toLowerCase().trim() == '' ? 'same as product name' : _nameController.text.toLowerCase().trim()}"',
+                    _selectedItem != null 
+                        ? 'Recipe tag: "${_selectedItem!.recipeTag}" (from database)'
+                        : 'Recipe tag will be "${_nameController.text.toLowerCase().trim() == '' ? 'same as product name' : _nameController.text.toLowerCase().trim()}"',
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
                 ),
@@ -763,7 +903,6 @@ class _AddProductPageState extends State<AddProductPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Required expiration date picker with validation
               Container(
                 decoration: BoxDecoration(
                   border: Border.all(
@@ -802,7 +941,6 @@ class _AddProductPageState extends State<AddProductPage> {
                   onTap: () => _selectDate(context),
                 ),
               ),
-              // Show validation message for expiration date if needed
               if (_isExpirationDateInvalid())
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0, left: 12.0),
@@ -850,16 +988,23 @@ class _AddProductPageState extends State<AddProductPage> {
                       return;
                     }
                     
+                    String finalRecipeTag;
+                    if (_customRecipeTag) {
+                      finalRecipeTag = _recipeTagController.text.trim();
+                    } else if (_selectedItem != null) {
+                      finalRecipeTag = _selectedItem!.recipeTag;
+                    } else {
+                      finalRecipeTag = _nameController.text.toLowerCase().trim();
+                    }
+                    
                     final product = Product(
                       id: _productId,
                       name: _nameController.text.trim(),
                       quantity: int.parse(_quantityController.text.trim()),
                       quantityUnit: _selectedUnit,
                       tag: _selectedTag,
-                      recipeTag: _customRecipeTag
-                          ? _recipeTagController.text.trim()
-                          : _nameController.text.toLowerCase().trim(),
-                      expirationDate: _expirationDate!, // Now required
+                      recipeTag: finalRecipeTag,
+                      expirationDate: _expirationDate!,
                     );
                     Navigator.of(context).pop(product);
                   } else {

@@ -7,7 +7,7 @@ import 'login_screen.dart'; // import the login screen
 class HomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
     {'title': 'Add Item', 'route': '/product'},
-    {'title': 'Report', 'route': '/report'},
+    {'title': 'Generate Report', 'route': '/report'},
     {'title': 'Shopping List', 'route': '/shoppinglist'},
   ];
 

@@ -37,59 +37,85 @@ class _ShoppingListState extends State<ShoppingList> {
     });
   }
 
+  void _showAddItemDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Add Item'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: _itemController,
+                decoration: InputDecoration(labelText: 'Item'),
+              ),
+              TextField(
+                controller: _quantityController,
+                decoration: InputDecoration(labelText: 'Quantity'),
+              ),
+              TextField(
+                controller: _unitController,
+                decoration: InputDecoration(labelText: 'Unit'),
+              ),
+              TextField(
+                controller: _reminderController,
+                decoration: InputDecoration(labelText: 'Reminder Date'),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Add'),
+              onPressed: () {
+                _addItem();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Shopping List')),
+      appBar: AppBar(
+        title: Text('Shopping List'),
+        actions: [
+          IconButton(icon: Icon(Icons.shopping_cart), onPressed: () {}),
+        ],
+      ),
       body: Column(
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _itemController,
-              decoration: InputDecoration(labelText: 'Item'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _quantityController,
-              decoration: InputDecoration(labelText: 'Quantity'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _unitController,
-              decoration: InputDecoration(labelText: 'Unit'),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _reminderController,
-              decoration: InputDecoration(labelText: 'Reminder Date'),
-            ),
-          ),
-          ElevatedButton(onPressed: _addItem, child: Text('Add Item')),
           Expanded(
             child: ListView.builder(
               itemCount: _items.length,
               itemBuilder: (context, index) {
                 final item = _items[index];
                 return ListTile(
-                  title: Text(item.name),
-                  subtitle: Text(
-                    '${item.quantity} ${item.unit} - Reminder: ${item.reminderDate}',
+                  title: Text(
+                    item.name,
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  trailing: Checkbox(
-                    value: item.isBought,
-                    onChanged: (value) {
-                      _toggleBought(index);
-                    },
-                  ),
+                  trailing: Icon(Icons.arrow_forward_ios),
+                  onTap: () {},
                 );
               },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ElevatedButton(
+              onPressed: _showAddItemDialog,
+              child: Text('Add Item'),
             ),
           ),
         ],

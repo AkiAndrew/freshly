@@ -24,16 +24,19 @@ class _ScannerScreenState extends State<ScannerScreen> {
     if (status.isDenied || status.isPermanentlyDenied) {
       await showDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text('Permission Denied'),
-          content: Text('Camera permission is required. Please enable it in app settings.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('OK'),
-            )
-          ],
-        ),
+        builder:
+            (ctx) => AlertDialog(
+              title: Text('Permission Denied'),
+              content: Text(
+                'Camera permission is required. Please enable it in app settings.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text('OK'),
+                ),
+              ],
+            ),
       );
       throw Exception("Camera permission denied");
     }
@@ -56,9 +59,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
         setState(() {
           _isDetecting = false;
           _detectedItems = labels;
-          _result = labels.isNotEmpty
-              ? 'Detected: ${labels.join(', ')}'
-              : 'No recognizable item.';
+          _result =
+              labels.isNotEmpty
+                  ? 'Detected: ${labels.join(', ')}'
+                  : 'No recognizable item.';
         });
       }
     } catch (e) {
@@ -115,12 +119,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Row(
-          children: [
-            Text('Scan Receipt'),
-            Spacer(),
-            Icon(Icons.settings),
-          ],
+          children: [Text('Scan Receipt'), Spacer(), Icon(Icons.settings)],
         ),
+        backgroundColor: Color(0xFF266041),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -133,9 +134,15 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: _imageFile == null
-                  ? Center(child: Text('No image selected', style: TextStyle(fontSize: 18)))
-                  : Image.file(_imageFile!, fit: BoxFit.cover),
+              child:
+                  _imageFile == null
+                      ? Center(
+                        child: Text(
+                          'No image selected',
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      )
+                      : Image.file(_imageFile!, fit: BoxFit.cover),
             ),
             SizedBox(height: 20),
             Text(
@@ -148,21 +155,31 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ElevatedButton(
                 onPressed: _addToPantry,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: Color(0xFF4D8C66),
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: Text('Add to Pantry', style: TextStyle(fontSize: 18, color: Colors.white)),
+                child: Text(
+                  'Add to Pantry',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
               ),
             SizedBox(height: 10),
             ElevatedButton(
               onPressed: _scanBarcode,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: Color(0xFF4D8C66),
                 padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: Text('Scan Barcode', style: TextStyle(fontSize: 18, color: Colors.white)),
+              child: Text(
+                'Scan Barcode',
+                style: TextStyle(fontSize: 18, color: Colors.white),
+              ),
             ),
             SizedBox(height: 10),
           ],
@@ -200,7 +217,8 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView> {
 
               if (imageBytes != null) {
                 final tempDir = Directory.systemTemp;
-                final filePath = '${tempDir.path}/barcode_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                final filePath =
+                    '${tempDir.path}/barcode_${DateTime.now().millisecondsSinceEpoch}.jpg';
                 imageFile = await File(filePath).writeAsBytes(imageBytes);
               }
 

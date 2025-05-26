@@ -180,7 +180,10 @@ class _MenuRecommendPageState extends State<MenuRecommendPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Menu Recommendation')),
+      appBar: AppBar(
+        title: Text('Menu Recommendation'),
+        backgroundColor: Color(0xFF266041),
+      ),
       body:
           isLoading
               ? Center(child: CircularProgressIndicator())
@@ -232,6 +235,9 @@ class _MenuRecommendPageState extends State<MenuRecommendPage> {
                               'Find Recipes',
                               style: TextStyle(fontSize: 16),
                             ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF4D8C66),
                           ),
                         ),
                       ),

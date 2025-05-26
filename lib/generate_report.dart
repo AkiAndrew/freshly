@@ -37,7 +37,10 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Generate Report')),
+      appBar: AppBar(
+        title: Text('Generate Report'),
+        backgroundColor: Color(0xFF266041),
+      ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
         child: Column(

@@ -16,7 +16,8 @@ class UserHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? 'demoUserId';
+    final currentUserId =
+        FirebaseAuth.instance.currentUser?.uid ?? 'demoUserId';
 
     return Scaffold(
       appBar: AppBar(
@@ -24,7 +25,13 @@ class UserHomeScreen extends StatelessWidget {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(children: [Icon(Icons.kitchen), SizedBox(width: 8), Text('FRESHLY user')]),
+            Row(
+              children: [
+                Icon(Icons.kitchen),
+                SizedBox(width: 8),
+                Text('FRESHLY user'),
+              ],
+            ),
             Row(
               children: [
                 IconButton(
@@ -39,7 +46,7 @@ class UserHomeScreen extends StatelessWidget {
                   },
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -48,7 +55,10 @@ class UserHomeScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('Expiring Soon', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Expiring Soon',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
           ),
           SizedBox(
             height: 150,
@@ -84,7 +94,9 @@ class UserHomeScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: () async {
                 final notificationService = NotificationService();
@@ -95,25 +107,41 @@ class UserHomeScreen extends StatelessWidget {
                   SnackBar(content: Text('Checked for expiring products')),
                 );
               },
-              child: Text('Test Expiry Notification', style: TextStyle(fontSize: 16, color: Colors.white)),
+              child: Text(
+                'Test Expiry Notification',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
             ),
           ),
 
           Expanded(
             child: ListView.builder(
               itemCount: _pages.length,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    backgroundColor: Colors.black,
+              itemBuilder:
+                  (context, index) => Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.black,
+                      ),
+                      child: Text(
+                        _pages[index]['title'],
+                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      ),
+                      onPressed:
+                          () => Navigator.pushNamed(
+                            context,
+                            _pages[index]['route'],
+                          ),
+                    ),
                   ),
-                  child: Text(_pages[index]['title'], style: TextStyle(fontSize: 18, color: Colors.white)),
-                  onPressed: () => Navigator.pushNamed(context, _pages[index]['route']),
-                ),
-              ),
             ),
           ),
         ],

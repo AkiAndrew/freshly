@@ -101,7 +101,7 @@ class HomeScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        backgroundColor: Colors.black,
+                        backgroundColor: Color(0xFF266041),
                       ),
                       child: Text(
                         _pages[index]['title'],

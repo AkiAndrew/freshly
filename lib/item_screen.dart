@@ -34,15 +34,15 @@ class ItemListView extends StatefulWidget {
 class _ItemListViewState extends State<ItemListView> {
   String _searchFilter = '';
   String _categoryFilter = 'all';
-  
+
   final List<String> _categories = [
     'all',
     'vegetables',
-    'fruits', 
+    'fruits',
     'meat',
     'dairy',
     'cereal',
-    'beverage'
+    'beverage',
   ];
 
   @override
@@ -50,7 +50,7 @@ class _ItemListViewState extends State<ItemListView> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Item List'),
-        backgroundColor: Colors.purple,
+        backgroundColor: Color(0xFF266041),
         foregroundColor: Colors.white,
       ),
       body: Column(
@@ -83,12 +83,17 @@ class _ItemListViewState extends State<ItemListView> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  items: _categories.map((String category) {
-                    return DropdownMenuItem<String>(
-                      value: category,
-                      child: Text(category == 'all' ? 'All Categories' : capitalizeString(category)),
-                    );
-                  }).toList(),
+                  items:
+                      _categories.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(
+                            category == 'all'
+                                ? 'All Categories'
+                                : capitalizeString(category),
+                          ),
+                        );
+                      }).toList(),
                   onChanged: (String? newValue) {
                     setState(() {
                       _categoryFilter = newValue ?? 'all';
@@ -101,10 +106,11 @@ class _ItemListViewState extends State<ItemListView> {
           // Items List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('items')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('items')
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
@@ -115,38 +121,50 @@ class _ItemListViewState extends State<ItemListView> {
                 }
 
                 final items = snapshot.data?.docs ?? [];
-                
+
                 // Apply filters
-                final filteredItems = items.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final name = (data['name'] ?? '').toString().toLowerCase();
-                  final productTag = (data['productTag'] ?? '').toString().toLowerCase();
-                  
-                  // Search filter
-                  final matchesSearch = _searchFilter.isEmpty || 
-                      name.contains(_searchFilter) || 
-                      productTag.contains(_searchFilter);
-                  
-                  // Category filter
-                  final matchesCategory = _categoryFilter == 'all' || 
-                      productTag == _categoryFilter;
-                  
-                  return matchesSearch && matchesCategory;
-                }).toList();
+                final filteredItems =
+                    items.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final name =
+                          (data['name'] ?? '').toString().toLowerCase();
+                      final productTag =
+                          (data['productTag'] ?? '').toString().toLowerCase();
+
+                      // Search filter
+                      final matchesSearch =
+                          _searchFilter.isEmpty ||
+                          name.contains(_searchFilter) ||
+                          productTag.contains(_searchFilter);
+
+                      // Category filter
+                      final matchesCategory =
+                          _categoryFilter == 'all' ||
+                          productTag == _categoryFilter;
+
+                      return matchesSearch && matchesCategory;
+                    }).toList();
 
                 if (filteredItems.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
                         SizedBox(height: 16),
                         Text(
                           _searchFilter.isEmpty && _categoryFilter == 'all'
                               ? 'No items found.\nStart adding items!'
                               : 'No items match your filters.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ],
                     ),
@@ -164,7 +182,7 @@ class _ItemListViewState extends State<ItemListView> {
                     final recipeTag = data['recipeTag'] ?? '';
                     final barcode = data['barcode'];
                     final createdAt = data['createdAt'] as Timestamp?;
-                    
+
                     return Card(
                       margin: EdgeInsets.only(bottom: 8),
                       elevation: 2,
@@ -183,8 +201,12 @@ class _ItemListViewState extends State<ItemListView> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Category: ${capitalizeString(productTag)}',
-                                style: TextStyle(color: _getCategoryColor(productTag))),
+                            Text(
+                              'Category: ${capitalizeString(productTag)}',
+                              style: TextStyle(
+                                color: _getCategoryColor(productTag),
+                              ),
+                            ),
                             Text('Recipe tag: $recipeTag'),
                             if (barcode != null) Text('Barcode: $barcode'),
                             if (createdAt != null)
@@ -197,18 +219,19 @@ class _ItemListViewState extends State<ItemListView> {
                               _deleteItem(doc.id, name);
                             }
                           },
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.delete, color: Colors.red),
-                                  SizedBox(width: 8),
-                                  Text('Delete'),
-                                ],
-                              ),
-                            ),
-                          ],
+                          itemBuilder:
+                              (context) => [
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete, color: Colors.red),
+                                      SizedBox(width: 8),
+                                      Text('Delete'),
+                                    ],
+                                  ),
+                                ),
+                              ],
                         ),
                         isThreeLine: true,
                       ),
@@ -225,25 +248,39 @@ class _ItemListViewState extends State<ItemListView> {
 
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'vegetables': return Colors.green;
-      case 'fruits': return Colors.orange;
-      case 'meat': return Colors.red;
-      case 'dairy': return Colors.blue;
-      case 'cereal': return Colors.brown;
-      case 'beverage': return Colors.cyan;
-      default: return Colors.grey;
+      case 'vegetables':
+        return Colors.green;
+      case 'fruits':
+        return Colors.orange;
+      case 'meat':
+        return Colors.red;
+      case 'dairy':
+        return Colors.blue;
+      case 'cereal':
+        return Colors.brown;
+      case 'beverage':
+        return Colors.cyan;
+      default:
+        return Colors.grey;
     }
   }
 
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'vegetables': return Icons.eco;
-      case 'fruits': return Icons.apple;
-      case 'meat': return Icons.lunch_dining;
-      case 'dairy': return Icons.local_drink;
-      case 'cereal': return Icons.grain;
-      case 'beverage': return Icons.local_cafe;
-      default: return Icons.inventory;
+      case 'vegetables':
+        return Icons.eco;
+      case 'fruits':
+        return Icons.apple;
+      case 'meat':
+        return Icons.lunch_dining;
+      case 'dairy':
+        return Icons.local_drink;
+      case 'cereal':
+        return Icons.grain;
+      case 'beverage':
+        return Icons.local_cafe;
+      default:
+        return Icons.inventory;
     }
   }
 
@@ -254,36 +291,37 @@ class _ItemListViewState extends State<ItemListView> {
   void _deleteItem(String docId, String itemName) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete Item'),
-        content: Text('Are you sure you want to delete "$itemName"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel'),
+      builder:
+          (ctx) => AlertDialog(
+            title: Text('Delete Item'),
+            content: Text('Are you sure you want to delete "$itemName"?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('items')
+                        .doc(docId)
+                        .delete();
+                    Navigator.of(ctx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Item deleted successfully')),
+                    );
+                  } catch (e) {
+                    Navigator.of(ctx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error deleting item: $e')),
+                    );
+                  }
+                },
+                child: Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await FirebaseFirestore.instance
-                    .collection('items')
-                    .doc(docId)
-                    .delete();
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Item deleted successfully')),
-                );
-              } catch (e) {
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error deleting item: $e')),
-                );
-              }
-            },
-            child: Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -298,11 +336,11 @@ class _ItemScreenState extends State<ItemScreen> {
   // Available product categories
   final List<String> _productCategories = [
     'vegetables',
-    'fruits', 
+    'fruits',
     'meat',
     'dairy',
     'cereal',
-    'beverage'
+    'beverage',
   ];
 
   Future<void> _requestCameraPermission() async {
@@ -311,16 +349,19 @@ class _ItemScreenState extends State<ItemScreen> {
     if (status.isDenied || status.isPermanentlyDenied) {
       await showDialog(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text('Permission Denied'),
-          content: Text('Camera permission is required. Please enable it in app settings.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('OK'),
-            )
-          ],
-        ),
+        builder:
+            (ctx) => AlertDialog(
+              title: Text('Permission Denied'),
+              content: Text(
+                'Camera permission is required. Please enable it in app settings.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text('OK'),
+                ),
+              ],
+            ),
       );
       throw Exception("Camera permission denied");
     }
@@ -343,9 +384,10 @@ class _ItemScreenState extends State<ItemScreen> {
         setState(() {
           _isDetecting = false;
           _detectedItems = labels;
-          _result = labels.isNotEmpty
-              ? 'Detected: ${labels.join(', ')}'
-              : 'No recognizable item.';
+          _result =
+              labels.isNotEmpty
+                  ? 'Detected: ${labels.join(', ')}'
+                  : 'No recognizable item.';
         });
       }
     } catch (e) {
@@ -397,114 +439,126 @@ class _ItemScreenState extends State<ItemScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Add Item Info'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (image != null)
-                  Container(
-                    height: 150,
-                    width: double.infinity,
-                    margin: EdgeInsets.only(bottom: 10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey),
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  title: Text('Add Item Info'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (image != null)
+                          Container(
+                            height: 150,
+                            width: double.infinity,
+                            margin: EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(image, fit: BoxFit.cover),
+                            ),
+                          ),
+                        TextField(
+                          controller: _nameController,
+                          decoration: InputDecoration(labelText: 'Item Name'),
+                        ),
+                        SizedBox(height: 15),
+                        DropdownButtonFormField<String>(
+                          value: _selectedProductTag,
+                          decoration: InputDecoration(
+                            labelText: 'Product Category',
+                            border: OutlineInputBorder(),
+                          ),
+                          items:
+                              _productCategories.map((String category) {
+                                return DropdownMenuItem<String>(
+                                  value: category,
+                                  child: Text(capitalizeString(category)),
+                                );
+                              }).toList(),
+                          onChanged: (String? newValue) {
+                            setDialogState(() {
+                              _selectedProductTag = newValue;
+                            });
+                          },
+                          hint: Text('Select category'),
+                        ),
+                        SizedBox(height: 15),
+                        TextField(
+                          controller: _recipeTagController,
+                          decoration: InputDecoration(
+                            labelText: 'Recipe Tag',
+                            hintText: 'e.g., apple, cheese, chicken',
+                          ),
+                        ),
+                      ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(image, fit: BoxFit.cover),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () async {
+                        final name = _nameController.text.trim();
+                        final recipeTag = _recipeTagController.text.trim();
+
+                        if (name.isEmpty ||
+                            _selectedProductTag == null ||
+                            recipeTag.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Please fill all fields')),
+                          );
+                          return;
+                        }
+
+                        // Check for duplicate barcode
+                        final existing =
+                            await FirebaseFirestore.instance
+                                .collection('items')
+                                .where('barcode', isEqualTo: barcode)
+                                .get();
+
+                        if (existing.docs.isNotEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Item with this barcode already exists',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        await FirebaseFirestore.instance
+                            .collection('items')
+                            .add({
+                              'name': name,
+                              'barcode': barcode,
+                              'productTag': _selectedProductTag,
+                              'recipeTag': recipeTag.toLowerCase(),
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+
+                        Navigator.of(ctx).pop();
+
+                        // Reset everything after dialog is closed
+                        setState(() {
+                          _imageFile = null;
+                          _result = 'Item Image';
+                          _detectedItems.clear();
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Item saved successfully')),
+                        );
+                      },
+                      child: Text('Save'),
                     ),
-                  ),
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(labelText: 'Item Name'),
+                  ],
                 ),
-                SizedBox(height: 15),
-                DropdownButtonFormField<String>(
-                  value: _selectedProductTag,
-                  decoration: InputDecoration(
-                    labelText: 'Product Category',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _productCategories.map((String category) {
-                    return DropdownMenuItem<String>(
-                      value: category,
-                      child: Text(capitalizeString(category)),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setDialogState(() {
-                      _selectedProductTag = newValue;
-                    });
-                  },
-                  hint: Text('Select category'),
-                ),
-                SizedBox(height: 15),
-                TextField(
-                  controller: _recipeTagController,
-                  decoration: InputDecoration(
-                    labelText: 'Recipe Tag',
-                    hintText: 'e.g., apple, cheese, chicken',
-                  ),
-                ),
-              ],
-            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                final name = _nameController.text.trim();
-                final recipeTag = _recipeTagController.text.trim();
-
-                if (name.isEmpty || _selectedProductTag == null || recipeTag.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please fill all fields')),
-                  );
-                  return;
-                }
-
-                // Check for duplicate barcode
-                final existing = await FirebaseFirestore.instance
-                    .collection('items')
-                    .where('barcode', isEqualTo: barcode)
-                    .get();
-
-                if (existing.docs.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Item with this barcode already exists')),
-                  );
-                  return;
-                }
-
-                await FirebaseFirestore.instance.collection('items').add({
-                  'name': name,
-                  'barcode': barcode,
-                  'productTag': _selectedProductTag,
-                  'recipeTag': recipeTag.toLowerCase(),
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-
-                Navigator.of(ctx).pop();
-
-                // Reset everything after dialog is closed
-                setState(() {
-                  _imageFile = null;
-                  _result = 'Item Image';
-                  _detectedItems.clear();
-                });
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Item saved successfully')),
-                );
-              },
-              child: Text('Save'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -515,99 +569,107 @@ class _ItemScreenState extends State<ItemScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Create Item Without Barcode'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Item Name',
-                    hintText: 'e.g., Apple, Chicken, Milk',
+      builder:
+          (ctx) => StatefulBuilder(
+            builder:
+                (context, setDialogState) => AlertDialog(
+                  title: Text('Create Item Without Barcode'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: _nameController,
+                          decoration: InputDecoration(
+                            labelText: 'Item Name',
+                            hintText: 'e.g., Apple, Chicken, Milk',
+                          ),
+                        ),
+                        SizedBox(height: 15),
+                        DropdownButtonFormField<String>(
+                          value: _selectedProductTag,
+                          decoration: InputDecoration(
+                            labelText: 'Product Category',
+                            border: OutlineInputBorder(),
+                          ),
+                          items:
+                              _productCategories.map((String category) {
+                                return DropdownMenuItem<String>(
+                                  value: category,
+                                  child: Text(capitalizeString(category)),
+                                );
+                              }).toList(),
+                          onChanged: (String? newValue) {
+                            setDialogState(() {
+                              _selectedProductTag = newValue;
+                            });
+                          },
+                          hint: Text('Select category'),
+                        ),
+                        SizedBox(height: 15),
+                        TextField(
+                          controller: _recipeTagController,
+                          decoration: InputDecoration(
+                            labelText: 'Recipe Tag',
+                            hintText: 'e.g., apple, cheese, chicken',
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final name = _nameController.text.trim();
+                        final recipeTag = _recipeTagController.text.trim();
+
+                        if (name.isEmpty ||
+                            _selectedProductTag == null ||
+                            recipeTag.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Please fill all fields')),
+                          );
+                          return;
+                        }
+
+                        await FirebaseFirestore.instance
+                            .collection('items')
+                            .add({
+                              'name': name,
+                              'barcode':
+                                  null, // No barcode for manually created items
+                              'productTag': _selectedProductTag,
+                              'recipeTag': recipeTag.toLowerCase(),
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+
+                        Navigator.of(ctx).pop();
+
+                        // Reset everything after dialog is closed
+                        setState(() {
+                          _imageFile = null;
+                          _result = 'Item Image';
+                          _detectedItems.clear();
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Item "$name" saved with category: ${capitalizeString(_selectedProductTag!)}',
+                            ),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      },
+                      child: Text('Create Item'),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 15),
-                DropdownButtonFormField<String>(
-                  value: _selectedProductTag,
-                  decoration: InputDecoration(
-                    labelText: 'Product Category',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _productCategories.map((String category) {
-                    return DropdownMenuItem<String>(
-                      value: category,
-                      child: Text(capitalizeString(category)),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setDialogState(() {
-                      _selectedProductTag = newValue;
-                    });
-                  },
-                  hint: Text('Select category'),
-                ),
-                SizedBox(height: 15),
-                TextField(
-                  controller: _recipeTagController,
-                  decoration: InputDecoration(
-                    labelText: 'Recipe Tag',
-                    hintText: 'e.g., apple, cheese, chicken',
-                  ),
-                ),
-              ],
-            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final name = _nameController.text.trim();
-                final recipeTag = _recipeTagController.text.trim();
-
-                if (name.isEmpty || 
-                    _selectedProductTag == null ||
-                    recipeTag.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please fill all fields')),
-                  );
-                  return;
-                }
-
-                await FirebaseFirestore.instance.collection('items').add({
-                  'name': name,
-                  'barcode': null, // No barcode for manually created items
-                  'productTag': _selectedProductTag,
-                  'recipeTag': recipeTag.toLowerCase(),
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-
-                Navigator.of(ctx).pop();
-
-                // Reset everything after dialog is closed
-                setState(() {
-                  _imageFile = null;
-                  _result = 'Item Image';
-                  _detectedItems.clear();
-                });
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Item "$name" saved with category: ${capitalizeString(_selectedProductTag!)}'),
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              },
-              child: Text('Create Item'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -623,12 +685,9 @@ class _ItemScreenState extends State<ItemScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Row(
-          children: [
-            Text('Scan Receipt'),
-            Spacer(),
-            Icon(Icons.settings),
-          ],
+          children: [Text('Scan Receipt'), Spacer(), Icon(Icons.settings)],
         ),
+        backgroundColor: Color(0xFF266041),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -641,9 +700,15 @@ class _ItemScreenState extends State<ItemScreen> {
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: _imageFile == null
-                  ? Center(child: Text('No item scanned', style: TextStyle(fontSize: 18)))
-                  : Image.file(_imageFile!, fit: BoxFit.cover),
+              child:
+                  _imageFile == null
+                      ? Center(
+                        child: Text(
+                          'No item scanned',
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      )
+                      : Image.file(_imageFile!, fit: BoxFit.cover),
             ),
             SizedBox(height: 20),
             Text(
@@ -656,41 +721,61 @@ class _ItemScreenState extends State<ItemScreen> {
               ElevatedButton(
                 onPressed: _viewItemList,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: Color(0xFF4D8C66),
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: Text('Add to Database', style: TextStyle(fontSize: 18, color: Colors.white)),
+                child: Text(
+                  'Add to Database',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
               ),
             SizedBox(height: 10),
             ElevatedButton(
               onPressed: _scanBarcode,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: Color(0xFF4D8C66),
                 padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: Text('Scan Item Barcode', style: TextStyle(fontSize: 18, color: Colors.white)),
+              child: Text(
+                'Scan Item Barcode',
+                style: TextStyle(fontSize: 18, color: Colors.white),
+              ),
             ),
             SizedBox(height: 10),
             ElevatedButton(
               onPressed: _showCreateItemDialog,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: Color(0xFF4D8C66),
                 padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: Text('Create Item Without Barcode', style: TextStyle(fontSize: 16, color: Colors.white)),
+              child: Text(
+                'Create Item Without Barcode',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
             ),
             SizedBox(height: 10),
             ElevatedButton(
               onPressed: _viewItemList,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple,
+                backgroundColor: Color(0xFF4D8C66),
                 padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: Text('View Item List', style: TextStyle(fontSize: 18, color: Colors.white)),
+              child: Text(
+                'View Item List',
+                style: TextStyle(fontSize: 18, color: Colors.white),
+              ),
             ),
             SizedBox(height: 10),
           ],
@@ -728,7 +813,8 @@ class _BarcodeScannerViewState extends State<BarcodeScannerView> {
 
               if (imageBytes != null) {
                 final tempDir = Directory.systemTemp;
-                final filePath = '${tempDir.path}/barcode_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                final filePath =
+                    '${tempDir.path}/barcode_${DateTime.now().millisecondsSinceEpoch}.jpg';
                 imageFile = await File(filePath).writeAsBytes(imageBytes);
               }
 

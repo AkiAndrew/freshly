@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'user_home_screen.dart';
 import 'admin_home_screen.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(); // Make sure Firebase is initialized
@@ -67,10 +66,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
         await _redirectBasedOnRole(userCredential.user!.uid);
       } else {
-        UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-          email: _email,
-          password: _password,
-        );
+        UserCredential userCredential = await _auth
+            .createUserWithEmailAndPassword(email: _email, password: _password);
 
         // Save user role in Firestore
         await _firestore.collection('users').doc(userCredential.user!.uid).set({
@@ -99,7 +96,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _redirectBasedOnRole(String uid) async {
     try {
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(uid).get();
 
       if (userDoc.exists) {
         final role = userDoc.get('role') as String?;
@@ -118,7 +116,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _switchAuthMode() {
     setState(() {
-      _authMode = _authMode == AuthMode.login ? AuthMode.register : AuthMode.login;
+      _authMode =
+          _authMode == AuthMode.login ? AuthMode.register : AuthMode.login;
       _errorMessage = null;
     });
   }
@@ -141,7 +140,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: EdgeInsets.all(8),
                     margin: EdgeInsets.only(bottom: 10),
                     color: Colors.red[100],
-                    child: Text(_errorMessage!, style: TextStyle(color: Colors.red)),
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 TextFormField(
                   decoration: InputDecoration(labelText: 'Email'),
@@ -171,12 +173,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   DropdownButtonFormField<String>(
                     value: _selectedRole,
                     decoration: InputDecoration(labelText: 'Select Role'),
-                    items: _roles
-                        .map((role) => DropdownMenuItem(
-                              value: role,
-                              child: Text(role[0].toUpperCase() + role.substring(1)),
-                            ))
-                        .toList(),
+                    items:
+                        _roles
+                            .map(
+                              (role) => DropdownMenuItem(
+                                value: role,
+                                child: Text(
+                                  role[0].toUpperCase() + role.substring(1),
+                                ),
+                              ),
+                            )
+                            .toList(),
                     onChanged: (value) {
                       setState(() {
                         _selectedRole = value ?? 'user';
@@ -192,13 +199,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 else
                   ElevatedButton(
                     onPressed: _submit,
-                    child: Text(_authMode == AuthMode.login ? 'Login' : 'Register'),
+                    child: Text(
+                      _authMode == AuthMode.login ? 'Login' : 'Register',
+                    ),
                   ),
                 TextButton(
                   onPressed: _switchAuthMode,
-                  child: Text(_authMode == AuthMode.login
-                      ? 'Create new account'
-                      : 'Have an account? Login'),
+                  child: Text(
+                    _authMode == AuthMode.login
+                        ? 'Create new account'
+                        : 'Have an account? Login',
+                  ),
                 ),
               ],
             ),

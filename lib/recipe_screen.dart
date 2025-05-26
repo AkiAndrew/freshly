@@ -51,9 +51,9 @@ class _RecipeScreenState extends State<RecipeScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Recipe added successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Recipe added successfully')));
 
       _nameController.clear();
       _imageController.clear();
@@ -62,16 +62,19 @@ class _RecipeScreenState extends State<RecipeScreen> {
         _tags.clear();
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add recipe: \$e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to add recipe: \$e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Add Recipe')),
+      appBar: AppBar(
+        title: Text('Add Recipe'),
+        backgroundColor: Color(0xFF266041),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -93,24 +96,29 @@ class _RecipeScreenState extends State<RecipeScreen> {
                     decoration: InputDecoration(labelText: 'Ingredient Tag'),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: _addTag,
-                )
+                IconButton(icon: Icon(Icons.add), onPressed: _addTag),
               ],
             ),
             Wrap(
               spacing: 8.0,
-              children: _tags.map((tag) => Chip(
-                label: Text(tag),
-                onDeleted: () => _removeTag(tag),
-              )).toList(),
+              children:
+                  _tags
+                      .map(
+                        (tag) => Chip(
+                          label: Text(tag),
+                          onDeleted: () => _removeTag(tag),
+                        ),
+                      )
+                      .toList(),
             ),
             SizedBox(height: 20),
             Center(
               child: ElevatedButton(
                 onPressed: _addRecipe,
                 child: Text('Add Recipe'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF4D8C66),
+                ),
               ),
             ),
           ],
@@ -118,4 +126,4 @@ class _RecipeScreenState extends State<RecipeScreen> {
       ),
     );
   }
-} 
+}

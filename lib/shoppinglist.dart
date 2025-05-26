@@ -207,51 +207,73 @@ class _ShoppingListState extends State<ShoppingList> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Shopping List'),
+        backgroundColor: Color(0xFF266041),
         actions: [
           IconButton(icon: Icon(Icons.shopping_cart), onPressed: () {}),
         ],
       ),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: ListView.builder(
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final item = _items[index];
-                return ListTile(
-                  leading: Checkbox(
-                    value: item.isBought,
-                    onChanged: (bool? value) {
-                      _removeItem(index);
-                    },
-                  ),
-                  title: Text(
-                    item.name,
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                  onTap: () {},
-                );
-              },
+      body: Container(
+        color: Color(0xFFD9D9D9),
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: ListView.builder(
+                itemCount: _items.length,
+                itemBuilder: (context, index) {
+                  final item = _items[index];
+                  return ListTile(
+                    leading: Checkbox(
+                      value: item.isBought,
+                      onChanged: (bool? value) {
+                        _removeItem(index);
+                      },
+                    ),
+                    title: Text(
+                      item.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1C1C1C),
+                      ),
+                    ),
+                    trailing: Icon(
+                      Icons.arrow_forward_ios,
+                      color: Color(0xFF1C1C1C),
+                    ),
+                    onTap: () {},
+                  );
+                },
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton(
-                  onPressed: _showAddItemDialog,
-                  child: Text('Add Item'),
-                ),
-                ElevatedButton(
-                  onPressed: _showMealPlanDialog,
-                  child: Text('Auto-generate List'),
-                ),
-              ],
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: _showAddItemDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF4D8C66),
+                    ),
+                    child: Text(
+                      'Add Item',
+                      style: TextStyle(color: Color(0xFFC1FF72)),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: _showMealPlanDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF602646),
+                    ),
+                    child: Text(
+                      'Auto-generate List',
+                      style: TextStyle(color: Color(0xFFC1FF72)),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

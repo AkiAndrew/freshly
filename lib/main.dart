@@ -10,6 +10,7 @@ import 'item_screen.dart';
 import 'product_screen.dart';
 import 'recipe_screen.dart';
 import 'generate_report.dart';
+import 'shoppinglist.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,7 @@ class FridgeApp extends StatelessWidget {
         '/product': (context) => ProductScreen(),
         '/recipe': (context) => RecipeScreen(),
         '/report': (context) => GenerateReportScreen(),
+        '/shoppinglist': (context) => ShoppingList(),
       },
     );
   }

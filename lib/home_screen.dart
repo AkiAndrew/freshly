@@ -4,12 +4,10 @@ import 'scanner_screen.dart';
 import 'waste_reduction_screen.dart';
 import 'login_screen.dart'; // import the login screen
 
-
-
 class HomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
-  {'title': 'Add Item', 'route': '/product'},
-  {'title': 'Report', 'route': '/waste'},
+    {'title': 'Add Item', 'route': '/product'},
+    {'title': 'Report', 'route': '/report'},
   ];
 
   final List<Map<String, String>> expiringSoonItems = [
@@ -25,7 +23,13 @@ class HomeScreen extends StatelessWidget {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(children: [Icon(Icons.kitchen), SizedBox(width: 8), Text('FRESHLY')]),
+            Row(
+              children: [
+                Icon(Icons.kitchen),
+                SizedBox(width: 8),
+                Text('FRESHLY'),
+              ],
+            ),
             Row(
               children: [
                 IconButton(
@@ -34,10 +38,14 @@ class HomeScreen extends StatelessWidget {
                 ),
                 IconButton(
                   icon: Icon(Icons.person), // user icon instead of settings
-                  onPressed: () => Navigator.pushNamed(context, '/login'), // navigate to login
+                  onPressed:
+                      () => Navigator.pushNamed(
+                        context,
+                        '/login',
+                      ), // navigate to login
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),
@@ -46,7 +54,10 @@ class HomeScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('Expiring Soon', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Expiring Soon',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
           ),
           SizedBox(
             height: 150,
@@ -77,18 +88,31 @@ class HomeScreen extends StatelessWidget {
           Expanded(
             child: ListView.builder(
               itemCount: _pages.length,
-              itemBuilder: (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    backgroundColor: Colors.black,
+              itemBuilder:
+                  (context, index) => Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.black,
+                      ),
+                      child: Text(
+                        _pages[index]['title'],
+                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      ),
+                      onPressed:
+                          () => Navigator.pushNamed(
+                            context,
+                            _pages[index]['route'],
+                          ),
+                    ),
                   ),
-                  child: Text(_pages[index]['title'], style: TextStyle(fontSize: 18, color: Colors.white)),
-                  onPressed: () => Navigator.pushNamed(context, _pages[index]['route']),
-                ),
-              ),
             ),
           ),
         ],

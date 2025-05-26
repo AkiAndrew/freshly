@@ -7,8 +7,9 @@ import 'waste_reduction_screen.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 import 'item_screen.dart';
-import 'product_screen.dart'; 
-import 'recipe_screen.dart'; 
+import 'product_screen.dart';
+import 'recipe_screen.dart';
+import 'generate_report.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,12 +28,13 @@ class FridgeApp extends StatelessWidget {
         '/': (context) => HomeScreen(),
         '/scanner': (context) => ScannerScreen(),
         '/waste': (context) => WasteReductionScreen(),
-        '/login': (context) => LoginScreen(), 
+        '/login': (context) => LoginScreen(),
         '/admin_home_screen': (ctx) => AdminHomeScreen(),
         '/user_home_screen': (ctx) => UserHomeScreen(),
         '/item': (ctx) => ItemScreen(),
-        '/product': (context) =>  ProductScreen(),
+        '/product': (context) => ProductScreen(),
         '/recipe': (context) => RecipeScreen(),
+        '/report': (context) => GenerateReportScreen(),
       },
     );
   }

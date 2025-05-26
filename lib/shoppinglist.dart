@@ -11,7 +11,7 @@ class _ShoppingListState extends State<ShoppingList> {
   final List<ShoppingItem> _items = [];
   final TextEditingController _itemController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
-  final TextEditingController _reminderController = TextEditingController();
+  DateTime? _selectedDate;
 
   @override
   void initState() {
@@ -40,28 +40,41 @@ class _ShoppingListState extends State<ShoppingList> {
   }
 
   void _addItem() {
-    if (_itemController.text.isNotEmpty) {
+    if (_itemController.text.isNotEmpty && _selectedDate != null) {
       setState(() {
         _items.add(
           ShoppingItem(
             name: _itemController.text,
             quantity: _quantityController.text,
-            reminderDate: _reminderController.text,
+            reminderDate: _selectedDate.toString(),
           ),
         );
         _itemController.clear();
         _quantityController.clear();
-        _reminderController.clear();
+        _selectedDate = null;
         _saveItems();
       });
     }
   }
 
-  void _toggleBought(int index) {
+  void _removeItem(int index) {
     setState(() {
-      _items[index].isBought = !_items[index].isBought;
+      _items.removeAt(index);
       _saveItems();
     });
+  }
+
+  void _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != _selectedDate)
+      setState(() {
+        _selectedDate = picked;
+      });
   }
 
   void _showAddItemDialog() {
@@ -81,9 +94,18 @@ class _ShoppingListState extends State<ShoppingList> {
                 controller: _quantityController,
                 decoration: InputDecoration(labelText: 'Quantity'),
               ),
-              TextField(
-                controller: _reminderController,
-                decoration: InputDecoration(labelText: 'Reminder Date'),
+              Row(
+                children: <Widget>[
+                  Text(
+                    _selectedDate == null
+                        ? ''
+                        : 'Picked Date: ${_selectedDate.toString()}',
+                  ),
+                  TextButton(
+                    onPressed: () => _selectDate(context),
+                    child: Text('Choose Date'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -124,6 +146,12 @@ class _ShoppingListState extends State<ShoppingList> {
               itemBuilder: (context, index) {
                 final item = _items[index];
                 return ListTile(
+                  leading: Checkbox(
+                    value: item.isBought,
+                    onChanged: (bool? value) {
+                      _removeItem(index);
+                    },
+                  ),
                   title: Text(
                     item.name,
                     style: TextStyle(fontWeight: FontWeight.bold),

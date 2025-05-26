@@ -6,6 +6,8 @@ class UserHomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
     {'title': 'Add Item', 'route': '/product'},
     {'title': 'Report', 'route': '/waste'},
+    {'title': 'Shopping List', 'route': '/shoppinglist'},
+    {'title': 'Recipe Recommendations', 'route': '/recommendations'},
   ];
 
   final List<Map<String, String>> expiringSoonItems = [

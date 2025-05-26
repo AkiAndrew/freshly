@@ -3,12 +3,16 @@ import 'package:firebase_core/firebase_core.dart'; // Firebase Core
 import 'scanner_screen.dart';
 import 'waste_reduction_screen.dart';
 import 'login_screen.dart'; // import the login screen
+import 'item_screen.dart';
+import 'recommendationforuser.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
     {'title': 'Add Item', 'route': '/product'},
     {'title': 'Generate Report', 'route': '/report'},
     {'title': 'Shopping List', 'route': '/shoppinglist'},
+    {'title': 'Recipe Recommendations', 'route': '/recommendations'},
   ];
 
   final List<Map<String, String>> expiringSoonItems = [

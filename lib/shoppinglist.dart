@@ -129,6 +129,79 @@ class _ShoppingListState extends State<ShoppingList> {
     );
   }
 
+  void _showMealPlanDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Meal Plan'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                title: Text('Spaghetti Bolognese'),
+                onTap: () {
+                  _autoGenerateList('Spaghetti Bolognese');
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                title: Text('Fried Rice'),
+                onTap: () {
+                  _autoGenerateList('Fried Rice');
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _autoGenerateList(String mealPlan) {
+    List<ShoppingItem> mealPlanItems = [];
+
+    if (mealPlan == 'Spaghetti Bolognese') {
+      mealPlanItems = [
+        ShoppingItem(name: 'Pasta', quantity: '1 pack', reminderDate: ''),
+        ShoppingItem(name: 'Ground beef', quantity: '500g', reminderDate: ''),
+        ShoppingItem(name: 'Tomato sauce', quantity: '1 can', reminderDate: ''),
+        ShoppingItem(name: 'Cheese', quantity: '200g', reminderDate: ''),
+      ];
+    } else if (mealPlan == 'Fried Rice') {
+      mealPlanItems = [
+        ShoppingItem(name: 'Cooked rice', quantity: '2 cups', reminderDate: ''),
+        ShoppingItem(name: 'Eggs', quantity: '2', reminderDate: ''),
+        ShoppingItem(name: 'Oil', quantity: '2 tbsp', reminderDate: ''),
+        ShoppingItem(name: 'Garlic', quantity: '2 cloves', reminderDate: ''),
+        ShoppingItem(name: 'Onion', quantity: '1', reminderDate: ''),
+        ShoppingItem(
+          name: 'Spring onions',
+          quantity: '2 stalks',
+          reminderDate: '',
+        ),
+        ShoppingItem(name: 'Sausage', quantity: '1', reminderDate: ''),
+        ShoppingItem(name: 'Soy sauce', quantity: '2 tbsp', reminderDate: ''),
+        ShoppingItem(name: 'Salt', quantity: 'to taste', reminderDate: ''),
+        ShoppingItem(name: 'Pepper', quantity: 'to taste', reminderDate: ''),
+      ];
+    }
+
+    setState(() {
+      _items.addAll(mealPlanItems);
+      _saveItems();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -164,9 +237,18 @@ class _ShoppingListState extends State<ShoppingList> {
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: ElevatedButton(
-              onPressed: _showAddItemDialog,
-              child: Text('Add Item'),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _showAddItemDialog,
+                  child: Text('Add Item'),
+                ),
+                ElevatedButton(
+                  onPressed: _showMealPlanDialog,
+                  child: Text('Auto-generate List'),
+                ),
+              ],
             ),
           ),
         ],

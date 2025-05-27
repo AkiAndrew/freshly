@@ -5,7 +5,7 @@ import 'notification_service.dart'; // import your notification service
 class UserHomeScreen extends StatelessWidget {
   final List<Map<String, dynamic>> _pages = [
     {'title': 'Add Item', 'route': '/product'},
-    {'title': 'Report', 'route': '/waste'},
+    {'title': 'Report', 'route': '/report'},
     {'title': 'Shopping List', 'route': '/shoppinglist'},
     {'title': 'Recipe Recommendations', 'route': '/recommendations'},
   ];

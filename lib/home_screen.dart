@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // Firebase Core
 import 'scanner_screen.dart';
-import 'waste_reduction_screen.dart';
 import 'login_screen.dart'; // import the login screen
 import 'item_screen.dart';
 import 'recommendationforuser.dart';

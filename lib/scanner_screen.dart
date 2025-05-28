@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ScannerScreen extends StatefulWidget {
   @override
@@ -94,19 +96,145 @@ class _ScannerScreenState extends State<ScannerScreen> {
         final File? image = result['image'];
 
         if (scannedCode != null) {
-          setState(() {
-            _result = 'Scanned Barcode: $scannedCode';
-            _detectedItems = [scannedCode];
-            if (image != null) {
+          if (image != null) {
+            setState(() {
               _imageFile = image;
-            }
-          });
+            });
+          }
+
+          final snapshot = await FirebaseFirestore.instance
+              .collection('items')
+              .where('barcode', isEqualTo: scannedCode)
+              .limit(1)
+              .get();
+
+          if (snapshot.docs.isEmpty) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text('Not Found'),
+                content: Text('Nothing found. Please manually add the item.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            final data = snapshot.docs.first.data();
+            final name = data['name'] ?? '';
+            final productTag = data['productTag'] ?? '';
+            final recipeTag = data['recipeTag'] ?? '';
+
+            DateTime? selectedDate;
+
+            await showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              builder: (ctx) {
+                return StatefulBuilder(
+                  builder: (context, setModalState) {
+                    return Padding(
+                      padding: EdgeInsets.fromLTRB(20, 20, 20,
+                          MediaQuery.of(ctx).viewInsets.bottom + 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name,
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 10),
+                          Text('Category: $productTag'),
+                          Text('Recipe Tag: $recipeTag'),
+                          SizedBox(height: 20),
+                          Text('Choose Expiration Date:',
+                              style: TextStyle(fontWeight: FontWeight.w600)),
+                          TextButton.icon(
+                            icon: Icon(Icons.calendar_today),
+                            label: Text(selectedDate == null
+                                ? 'Pick a date'
+                                : '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'),
+                            onPressed: () async {
+                              final now = DateTime.now();
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: now.add(Duration(days: 7)),
+                                firstDate: now,
+                                lastDate: now.add(Duration(days: 365 * 5)),
+                              );
+                              if (picked != null) {
+                                setModalState(() {
+                                  selectedDate = picked;
+                                });
+                              }
+                            },
+                          ),
+                          SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            icon: Icon(Icons.save),
+                            label: Text('Save to Pantry'),
+                            onPressed: selectedDate == null
+                                ? null
+                                : () async {
+                                    final user = FirebaseFirestore.instance;
+                                    final currentUser =
+                                        await FirebaseFirestore.instance;
+
+                                    final userId =
+                                        FirebaseAuth.instance.currentUser?.uid;
+
+                                    if (userId == null) return;
+
+                                    await FirebaseFirestore.instance
+                                        .collection('users')
+                                        .doc(userId)
+                                        .collection('products')
+                                        .add({
+                                      'name': name,
+                                      'quantity': 1,
+                                      'quantityUnit': 'piece(s)',
+                                      'tag': productTag,
+                                      'recipeTag': recipeTag,
+                                      'expirationDate':
+                                          Timestamp.fromDate(selectedDate!),
+                                    });
+
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            'Saved "$name" to your pantry.'),
+                                      ),
+                                    );
+
+                                    setState(() {
+                                      _imageFile = null;
+                                      _detectedItems.clear();
+                                      _result = 'No item detected yet.';
+                                    });
+                                  },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            );
+          }
         }
       }
     } catch (e) {
       print('Barcode scan failed: $e');
     }
   }
+
 
   void _addToPantry() {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -47,7 +47,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
       await _firestore.collection('recipes').add({
         'name': name,
         'imageUrl': imageUrl.isEmpty ? null : imageUrl,
-        'recipeTags': tagsString,
+        'recipeTag': tagsString,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -72,7 +72,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add Recipe into database'),
+        title: Text('Add Recipe into Database'),
         backgroundColor: Color(0xFF266041),
       ),
       body: Padding(

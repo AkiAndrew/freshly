@@ -37,8 +37,8 @@ class _ItemListViewState extends State<ItemListView> {
 
   final List<String> _categories = [
     'all',
-    'vegetables',
-    'fruits',
+    'vegetable',
+    'fruit',
     'meat',
     'dairy',
     'cereal',
@@ -248,9 +248,9 @@ class _ItemListViewState extends State<ItemListView> {
 
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'vegetables':
+      case 'vegetable':
         return Colors.green;
-      case 'fruits':
+      case 'fruit':
         return Colors.orange;
       case 'meat':
         return Colors.red;
@@ -267,9 +267,9 @@ class _ItemListViewState extends State<ItemListView> {
 
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'vegetables':
+      case 'vegetable':
         return Icons.eco;
-      case 'fruits':
+      case 'fruit':
         return Icons.apple;
       case 'meat':
         return Icons.lunch_dining;
@@ -335,8 +335,8 @@ class _ItemScreenState extends State<ItemScreen> {
 
   // Available product categories
   final List<String> _productCategories = [
-    'vegetables',
-    'fruits',
+    'vegetable',
+    'fruit',
     'meat',
     'dairy',
     'cereal',
@@ -462,6 +462,18 @@ class _ItemScreenState extends State<ItemScreen> {
                               child: Image.file(image, fit: BoxFit.cover),
                             ),
                           ),
+                        Container(
+                          alignment: Alignment.centerLeft,
+                          margin: EdgeInsets.only(bottom: 10),
+                          child: Text(
+                            'Scanned Barcode: $barcode',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
                         TextField(
                           controller: _nameController,
                           decoration: InputDecoration(labelText: 'Item Name'),

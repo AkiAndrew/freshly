@@ -113,7 +113,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(children: [Icon(Icons.kitchen), SizedBox(width: 8), Text('FRESHLY admin')]),
+            Row(children: [Image.asset(
+              'assets/icon/logo2.png',
+              width: 32,
+              height: 32,
+            ), SizedBox(width: 8), Text('FRESHLY admin')]),
             Row(
               children: [
                 IconButton(

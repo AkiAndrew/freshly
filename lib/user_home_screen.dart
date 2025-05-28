@@ -113,7 +113,11 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(children: [Icon(Icons.kitchen), SizedBox(width: 8), Text('FRESHLY user')]),
+            Row(children: [Image.asset(
+              'assets/icon/logo2.png',
+              width: 32,
+              height: 32,
+            ), SizedBox(width: 8), Text('FRESHLY user')]),
             Row(
               children: [
                 IconButton(

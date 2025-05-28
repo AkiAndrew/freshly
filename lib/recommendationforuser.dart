@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RecipeRecommendationScreen extends StatefulWidget {
   @override
@@ -13,6 +14,7 @@ class _RecipeRecommendationScreenState
   List<DocumentSnapshot> _matchingRecipes = [];
   bool _isLoading = false;
   String _selectedIngredient = '';
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void dispose() {
@@ -29,7 +31,7 @@ class _RecipeRecommendationScreenState
     });
 
     try {
-      // Search for recipes in Firebase that contain the ingredient tag
+      // Search in the global recipes collection
       final QuerySnapshot recipesSnapshot =
           await FirebaseFirestore.instance
               .collection('recipes')
@@ -270,5 +272,26 @@ class _RecipeRecommendationScreenState
         ),
       ),
     );
+  }
+}
+
+Future<void> createUserSubcollections(String uid) async {
+  final firestore = FirebaseFirestore.instance;
+  final subcollections = [
+    'consumed_items',
+    'expiry_stats',
+    'food_categories',
+    'wasted_items',
+  ];
+
+  for (final sub in subcollections) {
+    final subColRef = firestore.collection('users').doc(uid).collection(sub);
+    // Add a dummy document if the collection is empty
+    final snapshot = await subColRef.limit(1).get();
+    if (snapshot.docs.isEmpty) {
+      await subColRef.add({
+        'init': true,
+      }); // You can remove this later if needed
+    }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class GenerateReportScreen extends StatefulWidget {
   @override
@@ -12,8 +13,24 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
   DateTime _startDate = DateTime.now().subtract(Duration(days: 7));
   DateTime _endDate = DateTime.now();
 
-  // Initialize Firestore
+  // Initialize Firestore and Auth
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  String? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _userId = _auth.currentUser?.uid;
+  }
+
+  // Helper method to get user's collection reference
+  CollectionReference _getUserCollection(String collectionName) {
+    return _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection(collectionName);
+  }
 
   void _updateTimeRange(String? value) {
     if (value == null) return;
@@ -110,6 +127,8 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
   }
 
   Widget _buildMostConsumedSection() {
+    if (_userId == null) return Text('Please log in to view reports');
+    
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -122,23 +141,19 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
             ),
             SizedBox(height: 10),
             StreamBuilder<QuerySnapshot>(
-              stream:
-                  _firestore
-                      .collection('consumed_items')
-                      .where('date', isGreaterThanOrEqualTo: _startDate)
-                      .where('date', isLessThanOrEqualTo: _endDate)
-                      .orderBy('date', descending: true)
-                      .limit(5)
-                      .snapshots(),
+              stream: _getUserCollection('consumed_items')
+                  .where('date', isGreaterThanOrEqualTo: _startDate)
+                  .where('date', isLessThanOrEqualTo: _endDate)
+                  .orderBy('date', descending: true)
+                  .limit(5)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Text('Something went wrong');
                 }
-
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return CircularProgressIndicator();
                 }
-
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),
@@ -160,6 +175,8 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
   }
 
   Widget _buildMostWastedSection() {
+    if (_userId == null) return Text('Please log in to view reports');
+
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -172,14 +189,12 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
             ),
             SizedBox(height: 10),
             StreamBuilder<QuerySnapshot>(
-              stream:
-                  _firestore
-                      .collection('wasted_items')
-                      .where('date', isGreaterThanOrEqualTo: _startDate)
-                      .where('date', isLessThanOrEqualTo: _endDate)
-                      .orderBy('date', descending: true)
-                      .limit(5)
-                      .snapshots(),
+              stream: _getUserCollection('wasted_items')
+                  .where('date', isGreaterThanOrEqualTo: _startDate)
+                  .where('date', isLessThanOrEqualTo: _endDate)
+                  .orderBy('date', descending: true)
+                  .limit(5)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Text('Something went wrong');
@@ -210,6 +225,8 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
   }
 
   Widget _buildFoodCategoriesSection() {
+    if (_userId == null) return Text('Please log in to view reports');
+
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -222,12 +239,10 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
             ),
             SizedBox(height: 20),
             StreamBuilder<QuerySnapshot>(
-              stream:
-                  _firestore
-                      .collection('food_categories')
-                      .where('date', isGreaterThanOrEqualTo: _startDate)
-                      .where('date', isLessThanOrEqualTo: _endDate)
-                      .snapshots(),
+              stream: _getUserCollection('food_categories')
+                  .where('date', isGreaterThanOrEqualTo: _startDate)
+                  .where('date', isLessThanOrEqualTo: _endDate)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Text('Something went wrong');
@@ -258,6 +273,8 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
   }
 
   Widget _buildExpiryStatistics() {
+    if (_userId == null) return Text('Please log in to view reports');
+
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -270,13 +287,11 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
             ),
             SizedBox(height: 10),
             StreamBuilder<QuerySnapshot>(
-              stream:
-                  _firestore
-                      .collection('expiry_stats')
-                      .where('date', isGreaterThanOrEqualTo: _startDate)
-                      .where('date', isLessThanOrEqualTo: _endDate)
-                      .limit(1)
-                      .snapshots(),
+              stream: _getUserCollection('expiry_stats')
+                  .where('date', isGreaterThanOrEqualTo: _startDate)
+                  .where('date', isLessThanOrEqualTo: _endDate)
+                  .limit(1)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Text('Something went wrong');

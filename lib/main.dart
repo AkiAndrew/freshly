@@ -11,6 +11,7 @@ import 'recipe_screen.dart';
 import 'generate_report.dart';
 import 'shoppinglist.dart';
 import 'recommendationforuser.dart';
+import 'package:firebase_firestore/firebase_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

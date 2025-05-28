@@ -760,21 +760,21 @@ class _ItemScreenState extends State<ItemScreen> {
               ),
             ),
             SizedBox(height: 10),
-            // ElevatedButton(
-            //   onPressed: _showCreateItemDialog,
-            //   style: ElevatedButton.styleFrom(
-            //     backgroundColor: Color(0xFF4D8C66),
-            //     padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-            //     shape: RoundedRectangleBorder(
-            //       borderRadius: BorderRadius.circular(12),
-            //     ),
-            //   ),
-            //   child: Text(
-            //     'Create Item Without Barcode',
-            //     style: TextStyle(fontSize: 16, color: Colors.white),
-            //   ),
-            // ),
-            // SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: _showCreateItemDialog,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF4D8C66),
+                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Create Item Without Barcode',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+            ),
+            SizedBox(height: 10),
             ElevatedButton(
               onPressed: _viewItemList,
               style: ElevatedButton.styleFrom(

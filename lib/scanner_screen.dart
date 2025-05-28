@@ -142,90 +142,114 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     return Padding(
                       padding: EdgeInsets.fromLTRB(20, 20, 20,
                           MediaQuery.of(ctx).viewInsets.bottom + 20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(name,
-                              style: TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.bold)),
-                          SizedBox(height: 10),
-                          Text('Category: $productTag'),
-                          Text('Recipe Tag: $recipeTag'),
-                          SizedBox(height: 20),
-                          Text('Choose Expiration Date:',
-                              style: TextStyle(fontWeight: FontWeight.w600)),
-                          TextButton.icon(
-                            icon: Icon(Icons.calendar_today),
-                            label: Text(selectedDate == null
-                                ? 'Pick a date'
-                                : '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'),
-                            onPressed: () async {
-                              final now = DateTime.now();
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: now.add(Duration(days: 7)),
-                                firstDate: now,
-                                lastDate: now.add(Duration(days: 365 * 5)),
-                              );
-                              if (picked != null) {
-                                setModalState(() {
-                                  selectedDate = picked;
-                                });
-                              }
-                            },
-                          ),
-                          SizedBox(height: 10),
-                          ElevatedButton.icon(
-                            icon: Icon(Icons.save),
-                            label: Text('Save to Pantry'),
-                            onPressed: selectedDate == null
-                                ? null
-                                : () async {
-                                    final user = FirebaseFirestore.instance;
-                                    final currentUser =
-                                        await FirebaseFirestore.instance;
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                margin: EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[400],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
+                            Text(
+                              name,
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(height: 8),
+                            Text('Category: $productTag'),
+                            Text('Recipe Tag: $recipeTag'),
+                            SizedBox(height: 20),
+                            Text('Expiration Date', style: TextStyle(fontWeight: FontWeight.w600)),
+                            SizedBox(height: 6),
+                            GestureDetector(
+                              onTap: () async {
+                                final now = DateTime.now();
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: now.add(Duration(days: 7)),
+                                  firstDate: now,
+                                  lastDate: now.add(Duration(days: 365 * 5)),
+                                );
+                                if (picked != null) {
+                                  setModalState(() {
+                                    selectedDate = picked;
+                                  });
+                                }
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  selectedDate == null
+                                    ? 'Pick a date'
+                                    : '${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                icon: Icon(Icons.save),
+                                label: Text('Product saved'),
+                                onPressed: selectedDate == null
+                                    ? null
+                                    : () async {
+                                        final userId = FirebaseAuth.instance.currentUser?.uid;
+                                        if (userId == null) return;
 
-                                    final userId =
-                                        FirebaseAuth.instance.currentUser?.uid;
+                                        await FirebaseFirestore.instance
+                                            .collection('users')
+                                            .doc(userId)
+                                            .collection('products')
+                                            .add({
+                                          'name': name,
+                                          'quantity': 1,
+                                          'quantityUnit': 'piece(s)',
+                                          'tag': productTag,
+                                          'recipeTag': recipeTag,
+                                          'expirationDate': Timestamp.fromDate(selectedDate!),
+                                        });
 
-                                    if (userId == null) return;
+                                        Navigator.pop(ctx);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Saved "$name" to the fridge.')),
+                                        );
 
-                                    await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .doc(userId)
-                                        .collection('products')
-                                        .add({
-                                      'name': name,
-                                      'quantity': 1,
-                                      'quantityUnit': 'piece(s)',
-                                      'tag': productTag,
-                                      'recipeTag': recipeTag,
-                                      'expirationDate':
-                                          Timestamp.fromDate(selectedDate!),
-                                    });
-
-                                    Navigator.pop(ctx);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                            'Saved "$name" to your pantry.'),
-                                      ),
-                                    );
-
-                                    setState(() {
-                                      _imageFile = null;
-                                      _detectedItems.clear();
-                                      _result = 'No item detected yet.';
-                                    });
-                                  },
-                          ),
-                        ],
+                                        setState(() {
+                                          _imageFile = null;
+                                          _detectedItems.clear();
+                                          _result = 'No item detected yet.';
+                                        });
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Theme.of(context).primaryColor,
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
                 );
-              },
+              }
+
             );
           }
         }
@@ -290,7 +314,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   ),
                 ),
                 child: Text(
-                  'Add to Pantry',
+                  'Product added',
                   style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),

@@ -656,11 +656,28 @@ class _ProductScreenState extends State<ProductScreen> {
                   },
                 ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addNewProduct,
-        tooltip: 'Add Product',
-        child: const Icon(Icons.add),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            onPressed: () => Navigator.pushNamed(context, '/scanner'),
+            icon: Icon(Icons.qr_code_scanner),
+            label: Text('Scan'),
+            heroTag: 'scannerFab',
+            backgroundColor: Colors.blue,
+          ),
+          SizedBox(height: 12),
+          FloatingActionButton(
+            onPressed: _addNewProduct,
+            tooltip: 'Add Product',
+            child: Icon(Icons.add),
+            heroTag: 'addFab',
+          ),
+        ],
       ),
+  
+
     );
   }
 }

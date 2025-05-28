@@ -130,6 +130,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pushReplacementNamed('/'),
+        ),
         title: Text(_authMode == AuthMode.login ? 'Login' : 'Register'),
       ),
       body: Padding(

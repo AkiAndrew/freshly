@@ -72,7 +72,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add Recipe'),
+        title: Text('Add Recipe into database'),
         backgroundColor: Color(0xFF266041),
       ),
       body: Padding(

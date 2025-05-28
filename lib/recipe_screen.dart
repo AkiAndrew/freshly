@@ -47,7 +47,7 @@ class _RecipeScreenState extends State<RecipeScreen> {
       await _firestore.collection('recipes').add({
         'name': name,
         'imageUrl': imageUrl.isEmpty ? null : imageUrl,
-        'tags': tagsString,
+        'recipeTags': tagsString,
         'createdAt': FieldValue.serverTimestamp(),
       });
 

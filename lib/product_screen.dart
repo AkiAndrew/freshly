@@ -8,20 +8,80 @@ class Product {
   final String name;
   final int quantity;
   final String quantityUnit;
-  final String tag;
+  final String productTag;
   final String recipeTag;
   final DateTime expirationDate;
+  final DateTime dateAdded;
+  final int month;
+  final int year;
 
   Product({
     String? id,
     required this.name,
     required this.quantity,
     required this.quantityUnit,
-    required this.tag,
+    required this.productTag,
     String? recipeTag,
     required this.expirationDate,
+    required this.dateAdded,
+    required this.month,
+    required this.year,
   }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
        recipeTag = recipeTag ?? name.toLowerCase().trim();
+}
+
+class PurchaseRecord {
+  final String productName;
+  final int quantity;
+  final String quantityUnit;
+  final String productTag;
+  final DateTime date;
+
+  PurchaseRecord({
+    required this.productName,
+    required this.quantity,
+    required this.quantityUnit,
+    required this.productTag,
+    required this.date,
+  });
+
+  factory PurchaseRecord.fromFirestore(Map<String, dynamic> data) {
+    return PurchaseRecord(
+      productName: data['productName'] ?? '',
+      quantity: data['quantity'] ?? 0,
+      quantityUnit: data['quantityUnit'] ?? 'piece(s)',
+      productTag: data['productTag'] ?? 'other',
+      date: (data['date'] as Timestamp).toDate(),
+    );
+  }
+}
+
+class NotificationData {
+  final String productName;
+  final int currentQuantity;
+  final int suggestedQuantity;
+  final String unit;
+  final String message;
+
+  NotificationData({
+    required this.productName,
+    required this.currentQuantity,
+    required this.suggestedQuantity,
+    required this.unit,
+    required this.message,
+  });
+}
+
+class SuggestedProduct {
+  final String name;
+  final int quantity;
+  final String unit;
+
+  SuggestedProduct({
+    required this.name,
+    required this.quantity,
+    required this.unit,
+  });
 }
 
 // ----------- Item Model for Firebase items collection -----------
@@ -65,14 +125,6 @@ class _ProductScreenState extends State<ProductScreen> {
 
   bool _isLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProductsFromFirestore();
-    _updateExpiryStats();
-    _addSampleDataForReports();
-  }
-
   Future<void> _loadProductsFromFirestore() async {
     setState(() {
       _isLoading = true;
@@ -102,12 +154,17 @@ class _ProductScreenState extends State<ProductScreen> {
               name: data['name'],
               quantity: data['quantity'],
               quantityUnit: data['quantityUnit'],
-              tag: data['tag'],
+              productTag: data['productTag'],
               recipeTag: data['recipeTag'],
               expirationDate:
                   data['expirationDate'] != null
                       ? (data['expirationDate'] as Timestamp).toDate()
                       : DateTime.now().add(const Duration(days: 7)),
+              dateAdded: data['dateAdded'] != null
+                  ? (data['dateAdded'] as Timestamp).toDate()
+                  : DateTime.now(),
+              month: data['month'] ?? DateTime.now().month,
+              year: data['year'] ?? DateTime.now().year,
             );
           }).toList();
 
@@ -138,9 +195,12 @@ class _ProductScreenState extends State<ProductScreen> {
       'name': product.name,
       'quantity': product.quantity,
       'quantityUnit': product.quantityUnit,
-      'tag': product.tag,
+      'productTag': product.productTag,
       'recipeTag': product.recipeTag,
       'expirationDate': Timestamp.fromDate(product.expirationDate),
+      'dateAdded': Timestamp.fromDate(product.dateAdded),
+      'month': product.month,
+      'year': product.year,
     });
   }
 
@@ -189,14 +249,14 @@ class _ProductScreenState extends State<ProductScreen> {
           await _firestore.collection('${result}_items').add({
             'name': productData['name'],
             'quantity': productData['quantity'],
-            'tag': productData['tag'],
+            'productTag': productData['productTag'],
             'date': Timestamp.now(),
           });
 
           // Update food categories statistics
           final categoryRef = _firestore
               .collection('food_categories')
-              .doc(productData['tag'].toLowerCase());
+              .doc(productData['productTag'].toLowerCase());
           await _firestore.runTransaction((transaction) async {
             final categoryDoc = await transaction.get(categoryRef);
             if (categoryDoc.exists) {
@@ -204,7 +264,7 @@ class _ProductScreenState extends State<ProductScreen> {
               transaction.update(categoryRef, {'count': currentCount + 1});
             } else {
               transaction.set(categoryRef, {
-                'category': productData['tag'],
+                'category': productData['productTag'],
                 'count': 1,
                 'date': Timestamp.now(),
               });
@@ -287,6 +347,8 @@ class _ProductScreenState extends State<ProductScreen> {
         _products.add(newProduct);
       });
       await _saveProductToFirestore(newProduct);
+
+      await _recordPurchase(newProduct);
     }
   }
 
@@ -375,8 +437,8 @@ class _ProductScreenState extends State<ProductScreen> {
     }
   }
 
-  Color _getTagColor(String tag) {
-    switch (tag.toLowerCase()) {
+  Color _getproductTagColor(String productTag) {
+    switch (productTag.toLowerCase()) {
       case 'vegetable':
         return Colors.green.shade100;
       case 'fruit':
@@ -415,13 +477,13 @@ class _ProductScreenState extends State<ProductScreen> {
         {
           'name': 'Chicken',
           'quantity': 3,
-          'tag': 'Meat',
+          'productTag': 'Meat',
           'date': Timestamp.now(),
         },
         {
           'name': 'Rice',
           'quantity': 5,
-          'tag': 'Cereal',
+          'productTag': 'Cereal',
           'date': Timestamp.now(),
         },
         {
@@ -536,7 +598,243 @@ class _ProductScreenState extends State<ProductScreen> {
     }
   }
 
+  Future<void> _checkPurchasePatterns() async {
+  final user = _auth.currentUser;
+  if (user == null) return;
+
+  try {
+    final now = DateTime.now();
+    final currentMonth = now.month;
+    final currentYear = now.year;
+    
+    // Get purchase history for the last 3 months
+    final purchaseHistory = await _getPurchaseHistory(3);
+    
+    // Analyze patterns and generate notifications
+    final notifications = await _analyzePurchasePatterns(purchaseHistory, currentMonth, currentYear);
+    
+    // Show notifications if any
+    for (final notification in notifications) {
+      _showIntelligentNotification(notification);
+    }
+    
+  } catch (e) {
+    print('Error checking purchase patterns: $e');
+  }
+}
+Future<Map<String, List<PurchaseRecord>>> _getPurchaseHistory(int months) async {
+  final user = _auth.currentUser;
+  if (user == null) return {};
+
+  final now = DateTime.now();
+  final startDate = DateTime(now.year, now.month - months, 1);
+  
+  try {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('purchase_history')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .orderBy('date', descending: true)
+        .get();
+
+    final Map<String, List<PurchaseRecord>> history = {};
+    
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final record = PurchaseRecord.fromFirestore(data);
+      
+      if (!history.containsKey(record.productName)) {
+        history[record.productName] = [];
+      }
+      history[record.productName]!.add(record);
+    }
+    
+    return history;
+  } catch (e) {
+    print('Error getting purchase history: $e');
+    return {};
+  }
+}
+
+Future<List<NotificationData>> _analyzePurchasePatterns(
+  Map<String, List<PurchaseRecord>> history, 
+  int currentMonth, 
+  int currentYear
+) async {
+  final List<NotificationData> notifications = [];
+  
+  for (final entry in history.entries) {
+    final productName = entry.key;
+    final records = entry.value;
+    
+    if (records.length < 2) continue; // Need at least 2 records to compare
+    
+    // Group by month
+    final Map<String, int> monthlyQuantities = {};
+    final Map<String, String> monthlyUnits = {};
+    
+    for (final record in records) {
+      final date = record.date;
+      final monthKey = '${date.year}-${date.month}';
+      
+      monthlyQuantities[monthKey] = (monthlyQuantities[monthKey] ?? 0) + record.quantity;
+      monthlyUnits[monthKey] = record.quantityUnit;
+    }
+    
+    // Calculate average for previous months (excluding current month)
+    final previousMonths = monthlyQuantities.entries
+        .where((e) => e.key != '$currentYear-$currentMonth')
+        .toList();
+        
+    if (previousMonths.isEmpty) continue;
+    
+    final averageQuantity = previousMonths
+        .map((e) => e.value)
+        .reduce((a, b) => a + b) / previousMonths.length;
+    
+    // Get current month quantity
+    final currentMonthKey = '$currentYear-$currentMonth';
+    final currentQuantity = monthlyQuantities[currentMonthKey] ?? 0;
+    
+    // Check if current month is significantly lower than average
+    final threshold = 0.6; // 60% of average
+    if (currentQuantity < (averageQuantity * threshold) && averageQuantity >= 1) {
+      final unit = monthlyUnits[currentMonthKey] ?? monthlyUnits.values.first;
+      
+      notifications.add(NotificationData(
+        productName: productName,
+        currentQuantity: currentQuantity,
+        suggestedQuantity: averageQuantity.round(),
+        unit: unit,
+        message: 'You usually buy ${averageQuantity.round()} $unit of $productName per month, but only bought $currentQuantity this month. Consider buying ${(averageQuantity - currentQuantity).round()} more $unit.',
+      ));
+    }
+  }
+  
+  return notifications;
+}
+void _showIntelligentNotification(NotificationData notification) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.lightbulb, color: Colors.amber),
+            SizedBox(width: 8),
+            Text('Smart Shopping Tip'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '📊 Purchase Pattern Detected',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            SizedBox(height: 12),
+            Text(notification.message),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.shopping_cart, color: Colors.blue.shade600, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Suggested: ${notification.suggestedQuantity} ${notification.unit} of ${notification.productName}',
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _addSuggestedProduct(notification);
+            },
+            child: Text('Add to List'),
+          ),
+        ],
+      );
+    },
+  );
+}
+void _addSuggestedProduct(NotificationData notification) {
+  // Pre-fill the add product form with suggested data
+  Navigator.of(context).push<Product>(
+    MaterialPageRoute(
+      builder: (context) => AddProductPage(
+        suggestedProduct: SuggestedProduct(
+          name: notification.productName,
+          quantity: notification.suggestedQuantity - notification.currentQuantity,
+          unit: notification.unit,
+        ),
+      ),
+    ),
+  ).then((newProduct) {
+    if (newProduct != null) {
+      setState(() {
+        _products.add(newProduct);
+      });
+      _saveProductToFirestore(newProduct);
+    }
+  });
+}
+Future<void> _recordPurchase(Product product) async {
+  final user = _auth.currentUser;
+  if (user == null) return;
+
+  try {
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('purchase_history')
+        .add({
+      'productName': product.name,
+      'quantity': product.quantity,
+      'quantityUnit': product.quantityUnit,
+      'productTag': product.productTag,
+      'date': Timestamp.now(),
+      'month': DateTime.now().month,
+      'year': DateTime.now().year,
+    });
+  } catch (e) {
+    print('Error recording purchase: $e');
+  }
+}
+
+
   @override
+  void initState(){
+    super.initState();
+    _loadProductsFromFirestore();
+    _updateExpiryStats();
+    _addSampleDataForReports();
+
+    Future.delayed(Duration(seconds: 2), () {
+      _checkPurchasePatterns();
+    });
+  }
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -631,10 +929,10 @@ class _ProductScreenState extends State<ProductScreen> {
                               children: [
                                 Chip(
                                   label: Text(
-                                    product.tag,
+                                    product.productTag,
                                     style: const TextStyle(fontSize: 12),
                                   ),
-                                  backgroundColor: _getTagColor(product.tag),
+                                  backgroundColor: _getproductTagColor(product.productTag),
                                   materialTapTargetSize:
                                       MaterialTapTargetSize.shrinkWrap,
                                 ),
@@ -673,7 +971,15 @@ class _ProductScreenState extends State<ProductScreen> {
             tooltip: 'Add Product',
             child: Icon(Icons.add),
             heroTag: 'addFab',
-          ),
+            ),
+            FloatingActionButton.extended(
+            onPressed: _checkPurchasePatterns,
+            icon: Icon(Icons.analytics),
+            label: Text('Check Patterns'),
+            heroTag: 'patternsFab',
+            backgroundColor: Colors.green,
+            ),
+            SizedBox(height: 12),
         ],
       ),
   
@@ -685,8 +991,9 @@ class _ProductScreenState extends State<ProductScreen> {
 // ----------- AddProductPage with Firebase Items Integration -----------
 class AddProductPage extends StatefulWidget {
   final Product? product;
+  final SuggestedProduct? suggestedProduct;
 
-  const AddProductPage({Key? key, this.product}) : super(key: key);
+  const AddProductPage({Key? key, this.product, this.suggestedProduct}) : super(key: key);
 
   @override
   State<AddProductPage> createState() => _AddProductPageState();
@@ -698,7 +1005,7 @@ class _AddProductPageState extends State<AddProductPage> {
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _recipeTagController = TextEditingController();
 
-  String _selectedTag = 'Other';
+  String _selectedTag = 'other';
   String _selectedUnit = 'piece(s)';
   DateTime? _expirationDate;
   String? _productId;
@@ -724,14 +1031,14 @@ class _AddProductPageState extends State<AddProductPage> {
     'box(es)',
   ];
 
-  final List<String> _tagCategories = [
-    'Vegetable',
-    'Fruit',
-    'Dairy',
-    'Meat',
-    'Cereal',
-    'Beverage',
-    'Other',
+  final List<String> _productTagCategories = [
+    'vegetable',
+    'fruit',
+    'dairy',
+    'meat',
+    'cereal',
+    'beverage',
+    'other',
   ];
 
   @override
@@ -740,7 +1047,7 @@ class _AddProductPageState extends State<AddProductPage> {
     if (widget.product != null) {
       _nameController.text = widget.product!.name;
       _quantityController.text = widget.product!.quantity.toString();
-      _selectedTag = widget.product!.tag;
+      _selectedTag = widget.product!.productTag;
       _selectedUnit = widget.product!.quantityUnit;
       _expirationDate = widget.product!.expirationDate;
       _productId = widget.product!.id;
@@ -749,6 +1056,11 @@ class _AddProductPageState extends State<AddProductPage> {
       _customRecipeTag =
           widget.product!.recipeTag.toLowerCase().trim() !=
           widget.product!.name.toLowerCase().trim();
+    } else if (widget.suggestedProduct != null) {
+      _nameController.text = widget.suggestedProduct!.name;
+      _quantityController.text = widget.suggestedProduct!.quantity.toString();
+      _selectedUnit = widget.suggestedProduct!.unit;
+      _recipeTagController.text = widget.suggestedProduct!.name.toLowerCase().trim();
     } else {
       _recipeTagController.text = '';
     }
@@ -821,7 +1133,7 @@ class _AddProductPageState extends State<AddProductPage> {
     setState(() {
       _selectedItem = item;
       _nameController.text = item.name;
-      _selectedTag = _capitalizeFirst(item.productTag);
+      _selectedTag = (item.productTag);
       _recipeTagController.text = item.recipeTag;
       _showSuggestions = false;
 
@@ -1262,13 +1574,13 @@ class _AddProductPageState extends State<AddProductPage> {
               Wrap(
                 spacing: 8,
                 children:
-                    _tagCategories.map((tag) {
+                    _productTagCategories.map((productTag) {
                       return ChoiceChip(
-                        label: Text(tag),
-                        selected: _selectedTag == tag,
+                        label: Text(productTag),
+                        selected: _selectedTag == productTag,
                         onSelected: (selected) {
                           setState(() {
-                            _selectedTag = selected ? tag : 'Other';
+                            _selectedTag = selected ? productTag : 'other';
                           });
                         },
                       );
@@ -1304,14 +1616,22 @@ class _AddProductPageState extends State<AddProductPage> {
                           _nameController.text.toLowerCase().trim();
                     }
 
+                    final now = DateTime.now();
+                    final dateAdded = widget.product?.dateAdded ?? now;
+                    final month = widget.product?.month ?? now.month;
+                    final year = widget.product?.year ?? now.year;
+
                     final product = Product(
                       id: _productId,
                       name: _nameController.text.trim(),
                       quantity: int.parse(_quantityController.text.trim()),
                       quantityUnit: _selectedUnit,
-                      tag: _selectedTag,
+                      productTag: _selectedTag,
                       recipeTag: finalRecipeTag,
                       expirationDate: _expirationDate!,
+                      dateAdded: dateAdded,
+                      month: month,
+                      year: year,
                     );
                     Navigator.of(context).pop(product);
                   } else {

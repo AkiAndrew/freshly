@@ -159,7 +159,7 @@ class _RecipeRecommendationScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Recipe Recommendations'),
+        title: Text('Freshly'),
         backgroundColor: Color(0xFF266041),
       ),
       body: Padding(
@@ -167,10 +167,19 @@ class _RecipeRecommendationScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              'Recipe Recommendations',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1C1C1C),
+              ),
+            ),
+            SizedBox(height: 16),
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Enter an ingredient (e.g., chicken, apple)',
+                hintText: 'Search recipes...',
                 prefixIcon: Icon(Icons.search),
                 suffixIcon: IconButton(
                   icon: Icon(Icons.clear),

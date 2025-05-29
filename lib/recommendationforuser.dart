@@ -11,10 +11,41 @@ class RecipeRecommendationScreen extends StatefulWidget {
 class _RecipeRecommendationScreenState
     extends State<RecipeRecommendationScreen> {
   final TextEditingController _searchController = TextEditingController();
-  List<DocumentSnapshot> _matchingRecipes = [];
+  List<DocumentSnapshot> _recipes = [];
+  List<DocumentSnapshot> _allRecipes = []; // Store all original recipes
   bool _isLoading = false;
   String _selectedIngredient = '';
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecipes();
+  }
+
+  void _loadRecipes() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('recipes').get();
+      setState(() {
+        _recipes = snapshot.docs;
+        _allRecipes = snapshot.docs;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading recipes: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load recipes. Please try again.')),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -39,7 +70,8 @@ class _RecipeRecommendationScreenState
               .get();
 
       setState(() {
-        _matchingRecipes = recipesSnapshot.docs;
+        _recipes = recipesSnapshot.docs;
+        _allRecipes = recipesSnapshot.docs;
         _isLoading = false;
       });
     } catch (e) {
@@ -186,7 +218,8 @@ class _RecipeRecommendationScreenState
                   onPressed: () {
                     _searchController.clear();
                     setState(() {
-                      _matchingRecipes = [];
+                      _recipes = [];
+                      _allRecipes = [];
                       _selectedIngredient = '';
                     });
                   },
@@ -204,7 +237,7 @@ class _RecipeRecommendationScreenState
             SizedBox(height: 20),
             if (_isLoading)
               Center(child: CircularProgressIndicator(color: Color(0xFF4D8C66)))
-            else if (_matchingRecipes.isEmpty && _selectedIngredient.isNotEmpty)
+            else if (_recipes.isEmpty && _selectedIngredient.isNotEmpty)
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -218,12 +251,12 @@ class _RecipeRecommendationScreenState
                   ],
                 ),
               )
-            else if (_matchingRecipes.isNotEmpty)
+            else if (_recipes.isNotEmpty)
               Expanded(
                 child: ListView.builder(
-                  itemCount: _matchingRecipes.length,
+                  itemCount: _recipes.length,
                   itemBuilder: (context, index) {
-                    final recipe = _matchingRecipes[index];
+                    final recipe = _recipes[index];
                     final data = recipe.data() as Map<String, dynamic>;
                     return Card(
                       margin: EdgeInsets.only(bottom: 12),

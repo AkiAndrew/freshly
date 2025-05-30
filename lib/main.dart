@@ -19,6 +19,8 @@ void main() async {
 }
 
 class FridgeApp extends StatelessWidget {
+  const FridgeApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

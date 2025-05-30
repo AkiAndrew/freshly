@@ -723,7 +723,7 @@ void _showIntelligentNotification(NotificationData notification) {
           children: [
             Icon(Icons.lightbulb, color: Colors.amber),
             SizedBox(width: 8),
-            Text('Smart Shopping Tip'),
+            Expanded(child: Text('Smart Shopping Tip')), // Wrap title in Expanded
           ],
         ),
         content: Column(
@@ -745,6 +745,7 @@ void _showIntelligentNotification(NotificationData notification) {
                 border: Border.all(color: Colors.blue.shade200),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start, // Align to top
                 children: [
                   Icon(Icons.shopping_cart, color: Colors.blue.shade600, size: 20),
                   SizedBox(width: 8),
@@ -755,6 +756,7 @@ void _showIntelligentNotification(NotificationData notification) {
                         color: Colors.blue.shade700,
                         fontWeight: FontWeight.w500,
                       ),
+                      softWrap: true, // Ensure text wraps
                     ),
                   ),
                 ],
@@ -765,41 +767,14 @@ void _showIntelligentNotification(NotificationData notification) {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Maybe Later'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _addSuggestedProduct(notification);
-            },
-            child: Text('Add to List'),
+            child: Text('OK, Got it!'), // Fixed spacing
           ),
         ],
       );
     },
   );
 }
-void _addSuggestedProduct(NotificationData notification) {
-  // Pre-fill the add product form with suggested data
-  Navigator.of(context).push<Product>(
-    MaterialPageRoute(
-      builder: (context) => AddProductPage(
-        suggestedProduct: SuggestedProduct(
-          name: notification.productName,
-          quantity: notification.suggestedQuantity - notification.currentQuantity,
-          unit: notification.unit,
-        ),
-      ),
-    ),
-  ).then((newProduct) {
-    if (newProduct != null) {
-      setState(() {
-        _products.add(newProduct);
-      });
-      _saveProductToFirestore(newProduct);
-    }
-  });
-}
+
 Future<void> _recordPurchase(Product product) async {
   final user = _auth.currentUser;
   if (user == null) return;

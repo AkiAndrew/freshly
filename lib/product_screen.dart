@@ -160,9 +160,10 @@ class _ProductScreenState extends State<ProductScreen> {
                   data['expirationDate'] != null
                       ? (data['expirationDate'] as Timestamp).toDate()
                       : DateTime.now().add(const Duration(days: 7)),
-              dateAdded: data['dateAdded'] != null
-                  ? (data['dateAdded'] as Timestamp).toDate()
-                  : DateTime.now(),
+              dateAdded:
+                  data['dateAdded'] != null
+                      ? (data['dateAdded'] as Timestamp).toDate()
+                      : DateTime.now(),
               month: data['month'] ?? DateTime.now().month,
               year: data['year'] ?? DateTime.now().year,
             );
@@ -245,30 +246,40 @@ class _ProductScreenState extends State<ProductScreen> {
         );
 
         if (result == 'consumed' || result == 'wasted') {
-          // Add to consumed_items or wasted_items collection
-          await _firestore.collection('${result}_items').add({
-            'name': productData['name'],
-            'quantity': productData['quantity'],
-            'productTag': productData['productTag'],
-            'date': Timestamp.now(),
-          });
-
-          // Update food categories statistics
-          final categoryRef = _firestore
-              .collection('food_categories')
-              .doc(productData['productTag'].toLowerCase());
-          await _firestore.runTransaction((transaction) async {
-            final categoryDoc = await transaction.get(categoryRef);
-            if (categoryDoc.exists) {
-              final currentCount = categoryDoc.data()?['count'] ?? 0;
-              transaction.update(categoryRef, {'count': currentCount + 1});
-            } else {
-              transaction.set(categoryRef, {
-                'category': productData['productTag'],
-                'count': 1,
-                'date': Timestamp.now(),
+          // Add to user's consumed_items or wasted_items subcollection
+          await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('${result}_items')
+              .add({
+                'food_name': productData['name'],
+                'quantity': productData['quantity'],
+                'unit': productData['quantityUnit'],
+                'productTag': productData['productTag'],
+                'createdAt': Timestamp.now(),
+                'expired_count': result == 'wasted' ? 1 : 0,
+                'avg_days_before_expiry':
+                    result == 'wasted'
+                        ? (productData['expirationDate'] as Timestamp)
+                            .toDate()
+                            .difference(DateTime.now())
+                            .inDays
+                        : null,
               });
-            }
+
+          // Update food categories statistics under user's collection
+          final categoryRef =
+              _firestore
+                  .collection('users')
+                  .doc(user.uid)
+                  .collection('food_categories')
+                  .doc();
+
+          await categoryRef.set({
+            'category': productData['productTag'],
+            'percentage':
+                20, // You might want to calculate this based on your logic
+            'createdAt': Timestamp.now(),
           });
         }
       }
@@ -306,13 +317,17 @@ class _ProductScreenState extends State<ProductScreen> {
         }
       }
 
-      // Update expiry stats
-      await _firestore.collection('expiry_stats').add({
-        'expired_this_week': expiredThisWeek,
-        'expiring_next_week': expiringNextWeek,
-        'money_saved': moneySaved,
-        'date': Timestamp.now(),
-      });
+      // Update expiry stats under user's collection
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('expiry_stats')
+          .add({
+            'expired_this_week': expiredThisWeek,
+            'expiring_next_week': expiringNextWeek,
+            'money_saved': moneySaved,
+            'createdAt': Timestamp.now(),
+          });
     } catch (e) {
       print('Error updating expiry stats: $e');
     }
@@ -466,341 +481,231 @@ class _ProductScreenState extends State<ProductScreen> {
     return difference <= 3 && difference >= 0;
   }
 
-  // Add sample data for reports
-  Future<void> _addSampleDataForReports() async {
+  Future<void> _checkPurchasePatterns() async {
     final user = _auth.currentUser;
     if (user == null) return;
 
     try {
-      // Sample consumed items
-      final consumedItems = [
-        {
-          'name': 'Chicken',
-          'quantity': 3,
-          'productTag': 'Meat',
-          'date': Timestamp.now(),
-        },
-        {
-          'name': 'Rice',
-          'quantity': 5,
-          'productTag': 'Cereal',
-          'date': Timestamp.now(),
-        },
-        {
-          'name': 'Milk',
-          'quantity': 2,
-          'tag': 'Dairy',
-          'date': Timestamp.now(),
-        },
-        {
-          'name': 'Apple',
-          'quantity': 4,
-          'tag': 'Fruit',
-          'date': Timestamp.now(),
-        },
-        {
-          'name': 'Bread',
-          'quantity': 3,
-          'tag': 'Cereal',
-          'date': Timestamp.now(),
-        },
-      ];
+      final now = DateTime.now();
+      final currentMonth = now.month;
+      final currentYear = now.year;
 
-      // Sample wasted items
-      final wastedItems = [
-        {
-          'name': 'Tomato',
-          'quantity': 2,
-          'tag': 'Vegetable',
-          'date': Timestamp.now(),
-        },
-        {
-          'name': 'Yogurt',
-          'quantity': 1,
-          'tag': 'Dairy',
-          'date': Timestamp.now(),
-        },
-        {
-          'name': 'Banana',
-          'quantity': 3,
-          'tag': 'Fruit',
-          'date': Timestamp.now(),
-        },
-        {
-          'name': 'Lettuce',
-          'quantity': 1,
-          'tag': 'Vegetable',
-          'date': Timestamp.now(),
-        },
-        {'name': 'Fish', 'quantity': 1, 'tag': 'Meat', 'date': Timestamp.now()},
-      ];
+      // Get purchase history for the last 3 months
+      final purchaseHistory = await _getPurchaseHistory(3);
 
-      // Sample food categories
-      final foodCategories = [
-        {
-          'category': 'Vegetable',
-          'count': 15,
-          'percentage': 25,
-          'date': Timestamp.now(),
-        },
-        {
-          'category': 'Fruit',
-          'count': 12,
-          'percentage': 20,
-          'date': Timestamp.now(),
-        },
-        {
-          'category': 'Meat',
-          'count': 10,
-          'percentage': 17,
-          'date': Timestamp.now(),
-        },
-        {
-          'category': 'Dairy',
-          'count': 8,
-          'percentage': 13,
-          'date': Timestamp.now(),
-        },
-        {
-          'category': 'Cereal',
-          'count': 15,
-          'percentage': 25,
-          'date': Timestamp.now(),
-        },
-      ];
-
-      // Add consumed items
-      for (var item in consumedItems) {
-        await _firestore.collection('consumed_items').add(item);
-      }
-
-      // Add wasted items
-      for (var item in wastedItems) {
-        await _firestore.collection('wasted_items').add(item);
-      }
-
-      // Add food categories
-      for (var category in foodCategories) {
-        await _firestore.collection('food_categories').add(category);
-      }
-
-      // Add expiry stats
-      await _firestore.collection('expiry_stats').add({
-        'expired_this_week': 3,
-        'expiring_next_week': 5,
-        'money_saved': 25.50,
-        'date': Timestamp.now(),
-      });
-
-      print('Sample data added successfully');
-    } catch (e) {
-      print('Error adding sample data: $e');
-    }
-  }
-
-  Future<void> _checkPurchasePatterns() async {
-  final user = _auth.currentUser;
-  if (user == null) return;
-
-  try {
-    final now = DateTime.now();
-    final currentMonth = now.month;
-    final currentYear = now.year;
-    
-    // Get purchase history for the last 3 months
-    final purchaseHistory = await _getPurchaseHistory(3);
-    
-    // Analyze patterns and generate notifications
-    final notifications = await _analyzePurchasePatterns(purchaseHistory, currentMonth, currentYear);
-    
-    // Show notifications if any
-    for (final notification in notifications) {
-      _showIntelligentNotification(notification);
-    }
-    
-  } catch (e) {
-    print('Error checking purchase patterns: $e');
-  }
-}
-Future<Map<String, List<PurchaseRecord>>> _getPurchaseHistory(int months) async {
-  final user = _auth.currentUser;
-  if (user == null) return {};
-
-  final now = DateTime.now();
-  final startDate = DateTime(now.year, now.month - months, 1);
-  
-  try {
-    final snapshot = await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('purchase_history')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-        .orderBy('date', descending: true)
-        .get();
-
-    final Map<String, List<PurchaseRecord>> history = {};
-    
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final record = PurchaseRecord.fromFirestore(data);
-      
-      if (!history.containsKey(record.productName)) {
-        history[record.productName] = [];
-      }
-      history[record.productName]!.add(record);
-    }
-    
-    return history;
-  } catch (e) {
-    print('Error getting purchase history: $e');
-    return {};
-  }
-}
-
-Future<List<NotificationData>> _analyzePurchasePatterns(
-  Map<String, List<PurchaseRecord>> history, 
-  int currentMonth, 
-  int currentYear
-) async {
-  final List<NotificationData> notifications = [];
-  
-  for (final entry in history.entries) {
-    final productName = entry.key;
-    final records = entry.value;
-    
-    if (records.length < 2) continue; // Need at least 2 records to compare
-    
-    // Group by month
-    final Map<String, int> monthlyQuantities = {};
-    final Map<String, String> monthlyUnits = {};
-    
-    for (final record in records) {
-      final date = record.date;
-      final monthKey = '${date.year}-${date.month}';
-      
-      monthlyQuantities[monthKey] = (monthlyQuantities[monthKey] ?? 0) + record.quantity;
-      monthlyUnits[monthKey] = record.quantityUnit;
-    }
-    
-    // Calculate average for previous months (excluding current month)
-    final previousMonths = monthlyQuantities.entries
-        .where((e) => e.key != '$currentYear-$currentMonth')
-        .toList();
-        
-    if (previousMonths.isEmpty) continue;
-    
-    final averageQuantity = previousMonths
-        .map((e) => e.value)
-        .reduce((a, b) => a + b) / previousMonths.length;
-    
-    // Get current month quantity
-    final currentMonthKey = '$currentYear-$currentMonth';
-    final currentQuantity = monthlyQuantities[currentMonthKey] ?? 0;
-    
-    // Check if current month is significantly lower than average
-    final threshold = 0.6; // 60% of average
-    if (currentQuantity < (averageQuantity * threshold) && averageQuantity >= 1) {
-      final unit = monthlyUnits[currentMonthKey] ?? monthlyUnits.values.first;
-      
-      notifications.add(NotificationData(
-        productName: productName,
-        currentQuantity: currentQuantity,
-        suggestedQuantity: averageQuantity.round(),
-        unit: unit,
-        message: 'You usually buy ${averageQuantity.round()} $unit of $productName per month, but only bought $currentQuantity this month. Consider buying ${(averageQuantity - currentQuantity).round()} more $unit.',
-      ));
-    }
-  }
-  
-  return notifications;
-}
-void _showIntelligentNotification(NotificationData notification) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.lightbulb, color: Colors.amber),
-            SizedBox(width: 8),
-            Expanded(child: Text('Smart Shopping Tip')), // Wrap title in Expanded
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '📊 Purchase Pattern Detected',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            SizedBox(height: 12),
-            Text(notification.message),
-            SizedBox(height: 16),
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start, // Align to top
-                children: [
-                  Icon(Icons.shopping_cart, color: Colors.blue.shade600, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Suggested: ${notification.suggestedQuantity} ${notification.unit} of ${notification.productName}',
-                      style: TextStyle(
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      softWrap: true, // Ensure text wraps
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK, Got it!'), // Fixed spacing
-          ),
-        ],
+      // Analyze patterns and generate notifications
+      final notifications = await _analyzePurchasePatterns(
+        purchaseHistory,
+        currentMonth,
+        currentYear,
       );
-    },
-  );
-}
 
-Future<void> _recordPurchase(Product product) async {
-  final user = _auth.currentUser;
-  if (user == null) return;
-
-  try {
-    await _firestore
-        .collection('users')
-        .doc(user.uid)
-        .collection('purchase_history')
-        .add({
-      'productName': product.name,
-      'quantity': product.quantity,
-      'quantityUnit': product.quantityUnit,
-      'productTag': product.productTag,
-      'date': Timestamp.now(),
-      'month': DateTime.now().month,
-      'year': DateTime.now().year,
-    });
-  } catch (e) {
-    print('Error recording purchase: $e');
+      // Show notifications if any
+      for (final notification in notifications) {
+        _showIntelligentNotification(notification);
+      }
+    } catch (e) {
+      print('Error checking purchase patterns: $e');
+    }
   }
-}
 
+  Future<Map<String, List<PurchaseRecord>>> _getPurchaseHistory(
+    int months,
+  ) async {
+    final user = _auth.currentUser;
+    if (user == null) return {};
+
+    final now = DateTime.now();
+    final startDate = DateTime(now.year, now.month - months, 1);
+
+    try {
+      final snapshot =
+          await _firestore
+              .collection('users')
+              .doc(user.uid)
+              .collection('purchase_history')
+              .where(
+                'date',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+              )
+              .orderBy('date', descending: true)
+              .get();
+
+      final Map<String, List<PurchaseRecord>> history = {};
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final record = PurchaseRecord.fromFirestore(data);
+
+        if (!history.containsKey(record.productName)) {
+          history[record.productName] = [];
+        }
+        history[record.productName]!.add(record);
+      }
+
+      return history;
+    } catch (e) {
+      print('Error getting purchase history: $e');
+      return {};
+    }
+  }
+
+  Future<List<NotificationData>> _analyzePurchasePatterns(
+    Map<String, List<PurchaseRecord>> history,
+    int currentMonth,
+    int currentYear,
+  ) async {
+    final List<NotificationData> notifications = [];
+
+    for (final entry in history.entries) {
+      final productName = entry.key;
+      final records = entry.value;
+
+      if (records.length < 2) continue; // Need at least 2 records to compare
+
+      // Group by month
+      final Map<String, int> monthlyQuantities = {};
+      final Map<String, String> monthlyUnits = {};
+
+      for (final record in records) {
+        final date = record.date;
+        final monthKey = '${date.year}-${date.month}';
+
+        monthlyQuantities[monthKey] =
+            (monthlyQuantities[monthKey] ?? 0) + record.quantity;
+        monthlyUnits[monthKey] = record.quantityUnit;
+      }
+
+      // Calculate average for previous months (excluding current month)
+      final previousMonths =
+          monthlyQuantities.entries
+              .where((e) => e.key != '$currentYear-$currentMonth')
+              .toList();
+
+      if (previousMonths.isEmpty) continue;
+
+      final averageQuantity =
+          previousMonths.map((e) => e.value).reduce((a, b) => a + b) /
+          previousMonths.length;
+
+      // Get current month quantity
+      final currentMonthKey = '$currentYear-$currentMonth';
+      final currentQuantity = monthlyQuantities[currentMonthKey] ?? 0;
+
+      // Check if current month is significantly lower than average
+      final threshold = 0.6; // 60% of average
+      if (currentQuantity < (averageQuantity * threshold) &&
+          averageQuantity >= 1) {
+        final unit = monthlyUnits[currentMonthKey] ?? monthlyUnits.values.first;
+
+        notifications.add(
+          NotificationData(
+            productName: productName,
+            currentQuantity: currentQuantity,
+            suggestedQuantity: averageQuantity.round(),
+            unit: unit,
+            message:
+                'You usually buy ${averageQuantity.round()} $unit of $productName per month, but only bought $currentQuantity this month. Consider buying ${(averageQuantity - currentQuantity).round()} more $unit.',
+          ),
+        );
+      }
+    }
+
+    return notifications;
+  }
+
+  void _showIntelligentNotification(NotificationData notification) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.lightbulb, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Smart Shopping Tip'),
+              ), // Wrap title in Expanded
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '📊 Purchase Pattern Detected',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              SizedBox(height: 12),
+              Text(notification.message),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start, // Align to top
+                  children: [
+                    Icon(
+                      Icons.shopping_cart,
+                      color: Colors.blue.shade600,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Suggested: ${notification.suggestedQuantity} ${notification.unit} of ${notification.productName}',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        softWrap: true, // Ensure text wraps
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK, Got it!'), // Fixed spacing
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _recordPurchase(Product product) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('purchase_history')
+          .add({
+            'productName': product.name,
+            'quantity': product.quantity,
+            'quantityUnit': product.quantityUnit,
+            'productTag': product.productTag,
+            'date': Timestamp.now(),
+            'month': DateTime.now().month,
+            'year': DateTime.now().year,
+          });
+    } catch (e) {
+      print('Error recording purchase: $e');
+    }
+  }
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     _loadProductsFromFirestore();
     _updateExpiryStats();
@@ -810,6 +715,7 @@ Future<void> _recordPurchase(Product product) async {
       _checkPurchasePatterns();
     });
   }
+
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -907,7 +813,9 @@ Future<void> _recordPurchase(Product product) async {
                                     product.productTag,
                                     style: const TextStyle(fontSize: 12),
                                   ),
-                                  backgroundColor: _getproductTagColor(product.productTag),
+                                  backgroundColor: _getproductTagColor(
+                                    product.productTag,
+                                  ),
                                   materialTapTargetSize:
                                       MaterialTapTargetSize.shrinkWrap,
                                 ),
@@ -946,19 +854,17 @@ Future<void> _recordPurchase(Product product) async {
             tooltip: 'Add Product',
             child: Icon(Icons.add),
             heroTag: 'addFab',
-            ),
-            FloatingActionButton.extended(
+          ),
+          FloatingActionButton.extended(
             onPressed: _checkPurchasePatterns,
             icon: Icon(Icons.analytics),
             label: Text('Check Patterns'),
             heroTag: 'patternsFab',
             backgroundColor: Colors.green,
-            ),
-            SizedBox(height: 12),
+          ),
+          SizedBox(height: 12),
         ],
       ),
-  
-
     );
   }
 }
@@ -968,7 +874,8 @@ class AddProductPage extends StatefulWidget {
   final Product? product;
   final SuggestedProduct? suggestedProduct;
 
-  const AddProductPage({Key? key, this.product, this.suggestedProduct}) : super(key: key);
+  const AddProductPage({Key? key, this.product, this.suggestedProduct})
+    : super(key: key);
 
   @override
   State<AddProductPage> createState() => _AddProductPageState();
@@ -1035,7 +942,8 @@ class _AddProductPageState extends State<AddProductPage> {
       _nameController.text = widget.suggestedProduct!.name;
       _quantityController.text = widget.suggestedProduct!.quantity.toString();
       _selectedUnit = widget.suggestedProduct!.unit;
-      _recipeTagController.text = widget.suggestedProduct!.name.toLowerCase().trim();
+      _recipeTagController.text =
+          widget.suggestedProduct!.name.toLowerCase().trim();
     } else {
       _recipeTagController.text = '';
     }

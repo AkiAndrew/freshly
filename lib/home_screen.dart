@@ -13,12 +13,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<DocumentSnapshot> _allRecipes = [];
-  final List<Map<String, String>> expiringSoonItems = [
-    {'name': 'Vegetable', 'image': ''},
-    {'name': 'Banana', 'image': ''},
-    {'name': 'Spicy', 'image': ''},
-  ];
-
   List<DocumentSnapshot> _recipes = [];
 
   @override
@@ -44,57 +38,56 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (context) => Container(
-            padding: EdgeInsets.all(20),
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20),
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      data['name'] ?? 'Recipe Details',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 20),
-                if (data['imageUrl'] != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(
-                      data['imageUrl'],
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                SizedBox(height: 20),
                 Text(
-                  'Tags: ${data['recipeTags'] ?? ''}',
-                  style: TextStyle(fontSize: 16),
-                ),
-                SizedBox(height: 10),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Text(
-                      data['instructions'] ?? 'No instructions provided.',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                  data['name'] ?? 'Recipe Details',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
-          ),
+            SizedBox(height: 20),
+            if (data['imageUrl'] != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  data['imageUrl'],
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            SizedBox(height: 20),
+            Text(
+              'Tags: ${data['recipeTags'] ?? ''}',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 10),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Text(
+                  data['instructions'] ?? 'No instructions provided.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -109,14 +102,13 @@ class _HomeScreenState extends State<HomeScreen> {
       if (query.isEmpty) {
         _recipes = _allRecipes;
       } else {
-        _recipes =
-            _allRecipes.where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              final name = data['name']?.toString().toLowerCase() ?? '';
-              final tags = data['tags']?.toString().toLowerCase() ?? '';
-              return name.contains(query.toLowerCase()) ||
-                  tags.contains(query.toLowerCase());
-            }).toList();
+        _recipes = _allRecipes.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final name = data['name']?.toString().toLowerCase() ?? '';
+          final tags = data['tags']?.toString().toLowerCase() ?? '';
+          return name.contains(query.toLowerCase()) ||
+              tags.contains(query.toLowerCase());
+        }).toList();
       }
     });
   }
@@ -142,8 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 IconButton(
                   icon: Icon(Icons.shopping_cart),
-                  onPressed:
-                      () => Navigator.pushNamed(context, '/shoppinglist'),
+                  onPressed: () => Navigator.pushNamed(context, '/shoppinglist'),
                 ),
                 IconButton(
                   icon: Icon(Icons.person),
@@ -160,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Expiry section
+          // Expiry section (header only)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -179,41 +170,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           FirebaseAuth.instance.currentUser == null
               ? Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 20,
-                ),
-                child: Text(
-                  'Please log in to see expiring foods.',
-                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                ),
-              )
-              : SizedBox(
-                height: 130,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: expiringSoonItems.length,
-                  itemBuilder: (context, index) {
-                    final item = expiringSoonItems[index];
-                    return Container(
-                      width: 100,
-                      margin: EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.image, size: 50),
-                          SizedBox(height: 10),
-                          Text(item['name']!, textAlign: TextAlign.center),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 20,
+                  ),
+                  child: Text(
+                    'Please log in to see expiring foods.',
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  ),
+                )
+              : SizedBox.shrink(),
 
           // Recommendations section
           Padding(
@@ -223,6 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
+
           // Search bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -251,49 +218,47 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           Expanded(
-            child:
-                _recipes.isEmpty
-                    ? Center(child: CircularProgressIndicator())
-                    : ListView.builder(
-                      itemCount: _recipes.length,
-                      itemBuilder: (context, index) {
-                        final data =
-                            _recipes[index].data() as Map<String, dynamic>;
-                        return Card(
-                          margin: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
+            child: _recipes.isEmpty
+                ? Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: _recipes.length,
+                    itemBuilder: (context, index) {
+                      final data =
+                          _recipes[index].data() as Map<String, dynamic>;
+                      return Card(
+                        margin: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.all(16),
+                          leading: data['imageUrl'] != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    data['imageUrl'],
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.restaurant,
+                                  size: 40,
+                                  color: Colors.grey,
+                                ),
+                          title: Text(
+                            data['name'] ?? 'Unnamed Recipe',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ListTile(
-                            contentPadding: EdgeInsets.all(16),
-                            leading:
-                                data['imageUrl'] != null
-                                    ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        data['imageUrl'],
-                                        width: 60,
-                                        height: 60,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    )
-                                    : Icon(
-                                      Icons.restaurant,
-                                      size: 40,
-                                      color: Colors.grey,
-                                    ),
-                            title: Text(
-                              data['name'] ?? 'Unnamed Recipe',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            onTap: () => _showRecipeDetails(_recipes[index]),
-                          ),
-                        );
-                      },
-                    ),
+                          onTap: () => _showRecipeDetails(_recipes[index]),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -33,7 +33,9 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
   @override
   void initState() {
     super.initState();
+    print('GenerateReportScreen - initState called'); // Debug print
     _userId = _auth.currentUser?.uid;
+    print('GenerateReportScreen - User ID: $_userId'); // Debug print
     // Set initial date range based on 'All'
     _updateTimeRange('All');
   }
@@ -101,10 +103,15 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
 
   // Helper method to get user's collection reference
   CollectionReference _getUserCollection(String collectionName) {
-    return _firestore
+    print(
+      'Getting collection $collectionName for user $_userId',
+    ); // Debug print
+    final collection = _firestore
         .collection('users')
         .doc(_userId)
         .collection(collectionName);
+    print('Collection path: ${collection.path}'); // Debug print
+    return collection;
   }
 
   @override
@@ -191,7 +198,16 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
   }
 
   Widget _buildMostConsumedSection() {
-    if (_userId == null) return Text('Please log in to view reports');
+    if (_userId == null) {
+      print('Report - No user ID available for consumed items query');
+      return Text('Please log in to view reports');
+    }
+
+    print('Report - Building consumed section for user: $_userId');
+    print('Report - Selected time range: $_selectedTimeRange');
+    print(
+      'Report - Date range: ${_startDate.toIso8601String()} to ${_endDate.toIso8601String()}',
+    );
 
     return Card(
       child: Padding(
@@ -199,64 +215,194 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Most Consumed Foods',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Icon(Icons.trending_up, color: Colors.green.shade600),
+                SizedBox(width: 8),
+                Text(
+                  'Consumption Report',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade900,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 16),
             StreamBuilder<QuerySnapshot>(
-              stream:
-                  _selectedTimeRange == 'All'
-                      ? _getUserCollection('consumed_items')
-                          .orderBy('quantity', descending: true)
-                          .limit(5)
-                          .snapshots()
-                      : _getUserCollection('consumed_items')
-                          .where(
-                            'createdAt',
-                            isGreaterThanOrEqualTo: Timestamp.fromDate(
-                              _startDate,
-                            ),
-                          )
-                          .where(
-                            'createdAt',
-                            isLessThanOrEqualTo: Timestamp.fromDate(_endDate),
-                          )
-                          .orderBy('createdAt', descending: true)
-                          .orderBy('quantity', descending: true)
-                          .limit(5)
-                          .snapshots(),
+              stream: () {
+                final baseQuery = _getUserCollection('consumed_items');
+                if (_selectedTimeRange == 'All') {
+                  print('Report - Using "All" time query');
+                  final query = baseQuery
+                      .orderBy('quantity', descending: true)
+                      .limit(5);
+                  print('Report - Query path: ${query.parameters}');
+                  return query.snapshots();
+                } else {
+                  print('Report - Using date-filtered query');
+                  final query = baseQuery
+                      .where(
+                        'createdAt',
+                        isGreaterThanOrEqualTo: Timestamp.fromDate(_startDate),
+                      )
+                      .where(
+                        'createdAt',
+                        isLessThanOrEqualTo: Timestamp.fromDate(_endDate),
+                      )
+                      .orderBy('createdAt', descending: true)
+                      .orderBy('quantity', descending: true)
+                      .limit(5);
+                  print('Report - Query path: ${query.parameters}');
+                  return query.snapshots();
+                }
+              }(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
+                  print(
+                    'Report - Error in consumed items query: ${snapshot.error}',
+                  );
+                  if (snapshot.error is FirebaseException) {
+                    final error = snapshot.error as FirebaseException;
+                    print('Report - Firebase error code: ${error.code}');
+                    print('Report - Firebase error message: ${error.message}');
+                  }
                   return Text('Something went wrong');
                 }
+
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircularProgressIndicator();
+                  print('Report - Query is loading...');
+                  return Center(child: CircularProgressIndicator());
                 }
 
-                if (snapshot.data!.docs.isEmpty) {
+                final docs = snapshot.data?.docs ?? [];
+                print('Report - Query returned ${docs.length} documents');
+
+                if (docs.isEmpty) {
+                  print('Report - No consumed items found');
                   return Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text(
-                        'No consumption data available',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                      ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.trending_up,
+                          size: 48,
+                          color: Colors.grey.shade400,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'No consumption data for this period',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }
 
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: snapshot.data!.docs.length,
-                  itemBuilder: (context, index) {
-                    var doc = snapshot.data!.docs[index];
-                    return ListTile(
-                      title: Text(doc['food_name'] ?? 'Unknown'),
-                      trailing: Text('${doc['quantity']} ${doc['unit'] ?? ''}'),
-                    );
-                  },
+                // Calculate total items consumed
+                int totalConsumed = 0;
+                Map<String, int> itemCounts = {};
+
+                for (var doc in docs) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final foodName = data['food_name'] as String;
+                  final quantity = data['quantity'] as int;
+
+                  totalConsumed += quantity;
+                  itemCounts[foodName] = (itemCounts[foodName] ?? 0) + quantity;
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            totalConsumed.toString(),
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade700,
+                            ),
+                          ),
+                          Text(
+                            'Total items consumed',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.green.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      _selectedTimeRange == 'All'
+                          ? 'All Consumed Items'
+                          : 'Most Consumed Items',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green.shade900,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Column(
+                      children:
+                          itemCounts.entries.map((entry) {
+                            return Container(
+                              margin: EdgeInsets.symmetric(vertical: 4),
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.green.shade100,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    entry.key,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${entry.value} items',
+                                      style: TextStyle(
+                                        color: Colors.green.shade700,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ],
                 );
               },
             ),
@@ -275,68 +421,193 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Most Wasted Foods',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Icon(Icons.trending_down, color: Colors.red.shade600),
+                SizedBox(width: 8),
+                Text(
+                  'Waste Report',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade900,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 16),
             StreamBuilder<QuerySnapshot>(
-              stream:
-                  _selectedTimeRange == 'All'
-                      ? _getUserCollection('wasted_items')
-                          .orderBy('expired_count', descending: true)
-                          .limit(5)
-                          .snapshots()
-                      : _getUserCollection('wasted_items')
-                          .where(
-                            'createdAt',
-                            isGreaterThanOrEqualTo: Timestamp.fromDate(
-                              _startDate,
-                            ),
-                          )
-                          .where(
-                            'createdAt',
-                            isLessThanOrEqualTo: Timestamp.fromDate(_endDate),
-                          )
-                          .orderBy('createdAt', descending: true)
-                          .orderBy('expired_count', descending: true)
-                          .limit(5)
-                          .snapshots(),
+              stream: () {
+                final baseQuery = _getUserCollection('wasted_items');
+                if (_selectedTimeRange == 'All') {
+                  return baseQuery
+                      .orderBy('expired_count', descending: true)
+                      .limit(5)
+                      .snapshots();
+                } else {
+                  return baseQuery
+                      .where(
+                        'createdAt',
+                        isGreaterThanOrEqualTo: Timestamp.fromDate(_startDate),
+                      )
+                      .where(
+                        'createdAt',
+                        isLessThanOrEqualTo: Timestamp.fromDate(_endDate),
+                      )
+                      .orderBy('createdAt', descending: true)
+                      .orderBy('expired_count', descending: true)
+                      .limit(5)
+                      .snapshots();
+                }
+              }(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Text('Something went wrong');
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircularProgressIndicator();
+                  return Center(child: CircularProgressIndicator());
                 }
 
-                if (snapshot.data!.docs.isEmpty) {
+                final docs = snapshot.data?.docs ?? [];
+
+                if (docs.isEmpty) {
                   return Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text(
-                        'No waste data available',
-                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                      ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.trending_down,
+                          size: 48,
+                          color: Colors.grey.shade400,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'No waste data for this period',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }
 
-                return ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: snapshot.data!.docs.length,
-                  itemBuilder: (context, index) {
-                    var doc = snapshot.data!.docs[index];
-                    return ListTile(
-                      title: Text(doc['food_name'] ?? 'Unknown'),
-                      subtitle: Text(
-                        'Avg. days before expiry: ${doc['avg_days_before_expiry'] ?? 0}',
+                // Calculate total items wasted
+                int totalWasted = 0;
+                Map<String, int> itemCounts = {};
+
+                for (var doc in docs) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final foodName = data['food_name'] as String;
+                  final expiredCount = data['expired_count'] as int;
+
+                  totalWasted += expiredCount;
+                  itemCounts[foodName] =
+                      (itemCounts[foodName] ?? 0) + expiredCount;
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      trailing: Text('${doc['expired_count'] ?? 0} items'),
-                    );
-                  },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            totalWasted.toString(),
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                          Text(
+                            'Total items wasted',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.red.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      _selectedTimeRange == 'All'
+                          ? 'All Wasted Items'
+                          : 'Most Wasted Items',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red.shade900,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Column(
+                      children:
+                          itemCounts.entries.map((entry) {
+                            return Container(
+                              margin: EdgeInsets.symmetric(vertical: 4),
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.red.shade100),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          entry.key,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Avg. days before expiry: ${_calculateAvgDaysBeforeExpiry(docs, entry.key)}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${entry.value} items',
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ],
                 );
               },
             ),
@@ -344,6 +615,32 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
         ),
       ),
     );
+  }
+
+  double _calculateAvgDaysBeforeExpiry(
+    List<QueryDocumentSnapshot> docs,
+    String foodName,
+  ) {
+    var matchingDocs =
+        docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return data['food_name'] == foodName;
+        }).toList();
+
+    if (matchingDocs.isEmpty) return 0;
+
+    double totalDays = 0;
+    int count = 0;
+
+    for (var doc in matchingDocs) {
+      final data = doc.data() as Map<String, dynamic>;
+      if (data['avg_days_before_expiry'] != null) {
+        totalDays += (data['avg_days_before_expiry'] as num).toDouble();
+        count++;
+      }
+    }
+
+    return count > 0 ? (totalDays / count).roundToDouble() : 0;
   }
 
   Widget _buildFoodCategoriesSection() {

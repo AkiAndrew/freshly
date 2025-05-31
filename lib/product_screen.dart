@@ -207,6 +207,8 @@ class _ProductScreenState extends State<ProductScreen> {
 
   Future<void> _deleteProductFromFirestore(String productId) async {
     final user = _auth.currentUser;
+    print('DeleteProduct - Current user: ${user?.uid}');
+
     if (user == null) return;
 
     final productRef = _firestore
@@ -214,82 +216,294 @@ class _ProductScreenState extends State<ProductScreen> {
         .doc(user.uid)
         .collection('products')
         .doc(productId);
+    print('DeleteProduct - Product reference path: ${productRef.path}');
 
     try {
       // Get the product data before deleting
       final productDoc = await productRef.get();
+      print('DeleteProduct - Product exists: ${productDoc.exists}');
+
       if (productDoc.exists) {
         final productData = productDoc.data()!;
+        print('DeleteProduct - Product data: $productData');
 
-        // Show dialog to ask if the item was consumed or wasted
+        // Show enhanced dialog to ask if the item was consumed or wasted
         final result = await showDialog<String>(
           context: context,
           builder:
               (ctx) => AlertDialog(
-                title: Text('Item Removal'),
-                content: Text('Was this item consumed or wasted?'),
+                title: Text('What happened to "${productData['name']}"?'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Choose an action to help us track your food usage patterns:',
+                    ),
+                    SizedBox(height: 16),
+                    // Consumed Option
+                    InkWell(
+                      onTap: () => Navigator.of(ctx).pop('consumed'),
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.green.shade200),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.trending_up,
+                                color: Colors.green,
+                                size: 20,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Consumed',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Item was eaten/used completely',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    // Wasted Option
+                    InkWell(
+                      onTap: () => Navigator.of(ctx).pop('wasted'),
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.red.shade200),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.trending_down,
+                                color: Colors.red,
+                                size: 20,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Wasted',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Item was thrown away unused',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.red.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    // Just Delete Option
+                    InkWell(
+                      onTap: () => Navigator.of(ctx).pop('delete'),
+                      child: Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.delete_outline,
+                                color: Colors.grey.shade700,
+                                size: 20,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Just Delete',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Remove without tracking',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.of(ctx).pop('consumed'),
-                    child: Text('Consumed'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop('wasted'),
-                    child: Text('Wasted'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop('delete'),
-                    child: Text('Just Delete'),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text('Cancel'),
                   ),
                 ],
               ),
         );
 
+        print('DeleteProduct - User selected: $result');
+
         if (result == 'consumed' || result == 'wasted') {
-          // Add to user's consumed_items or wasted_items subcollection
-          await _firestore
+          final collectionRef = _firestore
               .collection('users')
               .doc(user.uid)
-              .collection('${result}_items')
-              .add({
-                'food_name': productData['name'],
-                'quantity': productData['quantity'],
-                'unit': productData['quantityUnit'],
-                'productTag': productData['productTag'],
-                'createdAt': Timestamp.now(),
-                'expired_count': result == 'wasted' ? 1 : 0,
-                'avg_days_before_expiry':
-                    result == 'wasted'
-                        ? (productData['expirationDate'] as Timestamp)
-                            .toDate()
-                            .difference(DateTime.now())
-                            .inDays
-                        : null,
-              });
+              .collection('${result}_items');
+          print(
+            'DeleteProduct - Target collection path: ${collectionRef.path}',
+          );
 
-          // Update food categories statistics under user's collection
-          final categoryRef =
-              _firestore
-                  .collection('users')
-                  .doc(user.uid)
-                  .collection('food_categories')
-                  .doc();
-
-          await categoryRef.set({
-            'category': productData['productTag'],
-            'percentage':
-                20, // You might want to calculate this based on your logic
+          // Create the item data
+          final itemData = {
+            'food_name': productData['name'],
+            'quantity': productData['quantity'],
+            'unit': productData['quantityUnit'],
+            'productTag': productData['productTag'],
             'createdAt': Timestamp.now(),
-          });
+            'originalId': productId,
+            if (result == 'wasted') ...{
+              'expired_count': 1,
+              'avg_days_before_expiry':
+                  (productData['expirationDate'] as Timestamp)
+                      .toDate()
+                      .difference(DateTime.now())
+                      .inDays,
+            },
+          };
+          print('DeleteProduct - Creating new item with data: $itemData');
+
+          // Add new item
+          final newDoc = await collectionRef.add(itemData);
+          print('DeleteProduct - Created new item with ID: ${newDoc.id}');
+
+          // Verify the item was created
+          final verifyDoc = await newDoc.get();
+          print(
+            'DeleteProduct - Verification - New item exists: ${verifyDoc.exists}',
+          );
+          if (verifyDoc.exists) {
+            print(
+              'DeleteProduct - Verification - New item data: ${verifyDoc.data()}',
+            );
+          }
+
+          // Update food categories statistics
+          await _updateFoodCategoryStats(
+            user.uid,
+            productData['productTag'],
+            result == 'wasted',
+          );
+          print('DeleteProduct - Updated food category stats');
         }
       }
 
       // Delete the product
       await productRef.delete();
-      print('Deleted product with id $productId from Firestore');
+      print('DeleteProduct - Successfully deleted product $productId');
     } catch (e) {
-      print('Failed to delete product $productId: $e');
+      print('DeleteProduct - Error: $e');
       rethrow;
+    }
+  }
+
+  // Helper method to update food category statistics
+  Future<void> _updateFoodCategoryStats(
+    String userId,
+    String category,
+    bool isWasted,
+  ) async {
+    try {
+      // Get existing category stats
+      final categorySnapshot =
+          await _firestore
+              .collection('users')
+              .doc(userId)
+              .collection('food_categories')
+              .where('category', isEqualTo: category)
+              .get();
+
+      if (categorySnapshot.docs.isEmpty) {
+        // Create new category stats if doesn't exist
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('food_categories')
+            .add({
+              'category': category,
+              'percentage': 20, // Initial percentage
+              'createdAt': Timestamp.now(),
+              'total_items': 1,
+              'wasted_items': isWasted ? 1 : 0,
+            });
+      } else {
+        // Update existing category stats
+        final categoryDoc = categorySnapshot.docs.first;
+        final currentData = categoryDoc.data();
+        await categoryDoc.reference.update({
+          'total_items': (currentData['total_items'] ?? 0) + 1,
+          'wasted_items':
+              (currentData['wasted_items'] ?? 0) + (isWasted ? 1 : 0),
+          'createdAt': Timestamp.now(),
+        });
+      }
+    } catch (e) {
+      print('Error updating food category stats: $e');
     }
   }
 
@@ -709,7 +923,6 @@ class _ProductScreenState extends State<ProductScreen> {
     super.initState();
     _loadProductsFromFirestore();
     _updateExpiryStats();
-    _addSampleDataForReports();
 
     Future.delayed(Duration(seconds: 2), () {
       _checkPurchasePatterns();

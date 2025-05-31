@@ -104,6 +104,23 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  void _searchRecipes(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _recipes = _allRecipes;
+      } else {
+        _recipes =
+            _allRecipes.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final name = data['name']?.toString().toLowerCase() ?? '';
+              final tags = data['tags']?.toString().toLowerCase() ?? '';
+              return name.contains(query.toLowerCase()) ||
+                  tags.contains(query.toLowerCase());
+            }).toList();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final _ = FirebaseAuth.instance.currentUser?.uid ?? 'demoUserId';
@@ -206,36 +223,28 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ),
-          // ✅ Search bar
+          // Search bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: TextField(
               controller: _searchController,
-              onChanged: (value) {
-                setState(() {
-                  _recipes =
-                      _allRecipes.where((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final name =
-                            data['name']?.toString().toLowerCase() ?? '';
-                        return name.contains(value.toLowerCase());
-                      }).toList();
-                });
-              },
+              onChanged: _searchRecipes,
               decoration: InputDecoration(
-                hintText: 'Search for a recipe...',
+                hintText: 'Search recipes...',
                 prefixIcon: Icon(Icons.search),
                 suffixIcon: IconButton(
                   icon: Icon(Icons.clear),
                   onPressed: () {
                     _searchController.clear();
-                    setState(() {
-                      _recipes = _allRecipes;
-                    });
+                    _searchRecipes('');
                   },
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Color(0xFF4D8C66), width: 2),
                 ),
               ),
             ),

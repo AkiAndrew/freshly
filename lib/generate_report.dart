@@ -15,107 +15,98 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
   String _selectedTimeRange = 'All';
   DateTime _startDate = DateTime.now().subtract(Duration(days: 7));
   DateTime _endDate = DateTime.now();
-  bool _isCustomDate = false;
 
   // Initialize Firestore and Auth
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String? _userId;
 
-  final List<String> _timeRanges = [
-    'All',
-    'Weekly',
-    'Monthly',
-    'Yearly',
-    'Custom',
-  ];
+  final List<String> _timeRanges = ['All', 'Weekly', 'Monthly', 'Yearly'];
 
   @override
   void initState() {
     super.initState();
-    print('GenerateReportScreen - initState called'); // Debug print
     _userId = _auth.currentUser?.uid;
-    print('GenerateReportScreen - User ID: $_userId'); // Debug print
-    // Set initial date range based on 'All'
+    print('GenerateReportScreen - User ID: $_userId');
     _updateTimeRange('All');
-  }
-
-  Future<void> _selectDateRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Color(0xFF266041),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _startDate = picked.start;
-        _endDate = picked.end;
-        _isCustomDate = true;
-        _selectedTimeRange = 'Custom';
-      });
-    }
   }
 
   void _updateTimeRange(String? value) {
     if (value == null) return;
+
+    final now = DateTime.now();
     setState(() {
       _selectedTimeRange = value;
-      _isCustomDate = false;
 
       switch (value) {
         case 'All':
-          _startDate = DateTime(2020); // Or any reasonable start date
-          _endDate = DateTime.now();
+          _startDate = DateTime(2023); // Or any reasonable start date
+          _endDate = now;
           break;
         case 'Weekly':
-          _startDate = DateTime.now().subtract(Duration(days: 7));
-          _endDate = DateTime.now();
+          // Start from the beginning of current week (Sunday)
+          _startDate = now.subtract(Duration(days: now.weekday - 7));
+          _endDate = now;
           break;
         case 'Monthly':
-          _startDate = DateTime.now().subtract(Duration(days: 30));
-          _endDate = DateTime.now();
+          // Start from the first day of current month
+          _startDate = DateTime(now.year, now.month, 1);
+          _endDate = now;
           break;
         case 'Yearly':
-          _startDate = DateTime.now().subtract(Duration(days: 365));
-          _endDate = DateTime.now();
-          break;
-        case 'Custom':
-          _selectDateRange();
+          // Start from the first day of current year
+          _startDate = DateTime(now.year, 1, 1);
+          _endDate = now;
           break;
       }
     });
-  }
-
-  // Helper method to get user's collection reference
-  CollectionReference _getUserCollection(String collectionName) {
     print(
-      'Getting collection $collectionName for user $_userId',
-    ); // Debug print
-    final collection = _firestore
-        .collection('users')
-        .doc(_userId)
-        .collection(collectionName);
-    print('Collection path: ${collection.path}'); // Debug print
-    return collection;
+      'Time range updated - $_selectedTimeRange: ${_startDate.toIso8601String()} to ${_endDate.toIso8601String()}',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Check if user is logged in
+    if (_userId == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Generate Report'),
+          backgroundColor: Color(0xFF266041),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.account_circle, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                'Please Log In',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Sign in to view your food consumption reports',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  // Navigate to login screen
+                  Navigator.pushNamed(context, '/login');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF266041),
+                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                ),
+                child: Text('Go to Login'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Generate Report'),
@@ -187,26 +178,30 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
 
   Widget _buildDateRangeDisplay() {
     final dateFormat = DateFormat('MMM dd, yyyy');
+    String rangeText;
+
+    switch (_selectedTimeRange) {
+      case 'Weekly':
+        rangeText = 'This Week\'s Report';
+        break;
+      case 'Monthly':
+        rangeText =
+            'This Month\'s Report (${DateFormat('MMMM yyyy').format(_startDate)})';
+        break;
+      case 'Yearly':
+        rangeText = 'This Year\'s Report (${_startDate.year})';
+        break;
+      default:
+        rangeText = 'All Time Report';
+    }
+
     return Text(
-      _selectedTimeRange == 'All'
-          ? 'Report Period: All Time'
-          : 'Report Period: ${dateFormat.format(_startDate)} - ${dateFormat.format(_endDate)}',
+      rangeText,
       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
     );
   }
 
   Widget _buildMostConsumedSection() {
-    if (_userId == null) {
-      print('Report - No user ID available for consumed items query');
-      return Text('Please log in to view reports');
-    }
-
-    print('Report - Building consumed section for user: $_userId');
-    print('Report - Selected time range: $_selectedTimeRange');
-    print(
-      'Report - Date range: ${_startDate.toIso8601String()} to ${_endDate.toIso8601String()}',
-    );
-
     return Card(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -230,30 +225,37 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
             SizedBox(height: 16),
             StreamBuilder<QuerySnapshot>(
               stream: () {
-                final baseQuery = _getUserCollection('consumed_items');
-                if (_selectedTimeRange == 'All') {
-                  print('Report - Using "All" time query');
-                  final query = baseQuery
-                      .orderBy('quantity', descending: true)
-                      .limit(5);
-                  print('Report - Query path: ${query.parameters}');
-                  return query.snapshots();
-                } else {
-                  print('Report - Using date-filtered query');
-                  final query = baseQuery
-                      .where(
-                        'createdAt',
-                        isGreaterThanOrEqualTo: Timestamp.fromDate(_startDate),
-                      )
-                      .where(
-                        'createdAt',
-                        isLessThanOrEqualTo: Timestamp.fromDate(_endDate),
-                      )
-                      .orderBy('createdAt', descending: true)
-                      .orderBy('quantity', descending: true)
-                      .limit(5);
-                  print('Report - Query path: ${query.parameters}');
-                  return query.snapshots();
+                try {
+                  final baseQuery = _getUserCollection('consumed_items');
+                  if (_selectedTimeRange == 'All') {
+                    print('Report - Using "All" time query');
+                    final query = baseQuery
+                        .orderBy('quantity', descending: true)
+                        .limit(5);
+                    print('Report - Query path: ${query.parameters}');
+                    return query.snapshots();
+                  } else {
+                    print('Report - Using date-filtered query');
+                    final query = baseQuery
+                        .where(
+                          'createdAt',
+                          isGreaterThanOrEqualTo: Timestamp.fromDate(
+                            _startDate,
+                          ),
+                        )
+                        .where(
+                          'createdAt',
+                          isLessThanOrEqualTo: Timestamp.fromDate(_endDate),
+                        )
+                        .orderBy('createdAt', descending: true)
+                        .orderBy('quantity', descending: true)
+                        .limit(5);
+                    print('Report - Query path: ${query.parameters}');
+                    return query.snapshots();
+                  }
+                } catch (e) {
+                  print('Error creating query: $e');
+                  return Stream.value(null as QuerySnapshot);
                 }
               }(),
               builder: (context, snapshot) {
@@ -261,24 +263,15 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
                   print(
                     'Report - Error in consumed items query: ${snapshot.error}',
                   );
-                  if (snapshot.error is FirebaseException) {
-                    final error = snapshot.error as FirebaseException;
-                    print('Report - Firebase error code: ${error.code}');
-                    print('Report - Firebase error message: ${error.message}');
-                  }
-                  return Text('Something went wrong');
+                  return Center(child: Text('No data available'));
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  print('Report - Query is loading...');
                   return Center(child: CircularProgressIndicator());
                 }
 
                 final docs = snapshot.data?.docs ?? [];
-                print('Report - Query returned ${docs.length} documents');
-
                 if (docs.isEmpty) {
-                  print('Report - No consumed items found');
                   return Center(
                     child: Column(
                       children: [
@@ -460,7 +453,7 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
               }(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Text('Something went wrong');
+                  return Text('No data available');
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -481,10 +474,7 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
                         SizedBox(height: 16),
                         Text(
                           'No waste data for this period',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
-                          ),
+                          style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
                       ],
                     ),
@@ -677,7 +667,7 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
                           .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Text('Something went wrong');
+                  return Text('No data available');
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -808,5 +798,19 @@ class _GenerateReportScreenState extends State<GenerateReportScreen> {
         ),
       ),
     );
+  }
+
+  // Helper method to get user's collection reference
+  CollectionReference _getUserCollection(String collectionName) {
+    if (_userId == null) {
+      throw Exception('User not logged in');
+    }
+    print('Getting collection $collectionName for user $_userId');
+    final collection = _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection(collectionName);
+    print('Collection path: ${collection.path}');
+    return collection;
   }
 }
